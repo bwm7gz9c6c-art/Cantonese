@@ -20,33 +20,202 @@ window.CANTO_DATA = {
     { n: 6, name: "陽去", contour: "低平 22", ex: "事", jy: "si6", anchor: "聽日嘅「日」jat6", shape: "low-flat" }
   ],
 
+  /* ---------- 0b. 粵拼入門小課（8 節，地圖 ⓪ 區；整區可以跳過） ----------
+     每節 = blocks（教學段落，h 標題 / p 內文 / eg 例字）＋ checks（3 題小測）。
+     checks 會攤平成 jy 題型（app.js 的 JYQ），所以 check 要寫足 q / opts / a / why。 */
+  jyCourse: [
+    {
+      id: "jy1", name: "一條粵拼點讀", sub: "聲母 ＋ 韻母 ＋ 調號", mins: 5,
+      blocks: [
+        { h: "粵拼係「三件套」", p: "每個音節都由聲母、韻母、聲調數字組成，寫法固定係：聲母 ＋ 韻母 ＋ 1–6。例如 si1 ＝ s ＋ i ＋ 1；faan1 ＝ f ＋ aa ＋ n ＋ 1。" },
+        { h: "冇聲母嘅音節", p: "有啲音節開頭冇輔音，粵拼直接由韻母開始寫，呢個叫零聲母：呀 aa3、唔 m4、愛 oi3。唔使加任何符號。",
+          eg: [{ jy: "aa3", hz: "呀", gl: "语气词" }, { jy: "m4", hz: "唔", gl: "不" }] },
+        { h: "調號寫喺最後", p: "調號永遠寫喺整個音節嘅最後面，一個音節一個數字，唔會寫喺中間。多音節詞用空格分開。",
+          eg: [{ jy: "m4 goi1", hz: "唔該", gl: "谢谢／麻烦你" }, { jy: "hoeng1 gong2", hz: "香港", gl: "香港" }] }
+      ],
+      checks: [
+        { q: "「faan1」入面，邊個係調號？", opts: ["f", "aa", "1"], a: 2, why: "調號永遠寫喺音節最後：f ＋ aa ＋ n ＋ 1。所以 1 係聲調，n 係韻尾。" },
+        { q: "「唔 m4」呢個音節有冇聲母？", opts: ["有，係 m", "冇，係零聲母", "有，係 ng"], a: 1, why: "m4 整個音節就係韻母本身；粵拼唔會為零聲母加符號。" },
+        { q: "粵拼用邊幾個數字表示聲調？", opts: ["1–4", "1–6", "1–9"], a: 1, why: "粵語六個調，粵拼用 1–6；入聲唔另設數字，用返 1／3／6。" }
+      ]
+    },
+    {
+      id: "jy2", name: "六個調", sub: "高平／高升／中平／低降／低升／低平", mins: 5,
+      blocks: [
+        { h: "六個調，同一個音", p: "1 高平、2 高升、3 中平、4 低降、5 低升、6 低平。全部用 si 做例子：si1 詩、si2 史、si3 試、si4 時、si5 市、si6 事。",
+          eg: [{ jy: "si1", hz: "詩", gl: "诗" }, { jy: "si2", hz: "史", gl: "历史" }, { jy: "si3", hz: "試", gl: "试" },
+               { jy: "si4", hz: "時", gl: "时候" }, { jy: "si5", hz: "市", gl: "市场" }, { jy: "si6", hz: "事", gl: "事情" }] },
+        { h: "聲調係音高走勢", p: "唔係唱歌，係相對高低。1 同 3 都係平嘅，1 高過 3；4 由低再跌落去；5 由低升返上嚟。" },
+        { h: "入聲只出現喺 1／3／6", p: "結尾係 -p／-t／-k 嘅音節（入聲）只會配 1、3、6 調；所以聽到短促嘅音，唔會係第 2 調。" }
+      ],
+      checks: [
+        { q: "「si2」係第幾調？", opts: ["2", "4", "6"], a: 0, why: "si2 係第 2 調（高升 35），例字「史」。" },
+        { q: "「事 si6」嘅音高走勢係？", opts: ["低平", "高升", "低降"], a: 0, why: "第 6 調係低平 22；低降係第 4 調，唔好混。" },
+        { q: "入聲音節唔會出現喺邊個調？", opts: ["第 2 調", "第 3 調", "第 6 調"], a: 0, why: "-p／-t／-k 結尾只配 1、3、6 調，所以第 2 調一定唔係入聲。" }
+      ]
+    },
+    {
+      id: "jy3", name: "入聲 -p／-t／-k", sub: "短促、收得埋", mins: 5,
+      blocks: [
+        { h: "三種塞音韻尾", p: "-p、-t、-k 係「收得埋」嘅韻尾：嘴形做到，但唔爆氣出嚟。",
+          eg: [{ jy: "sap6", hz: "十", gl: "十" }, { jy: "jat1", hz: "一", gl: "一" }, { jy: "baak3", hz: "百", gl: "百" }, { jy: "luk6", hz: "六", gl: "六" }] },
+        { h: "短、急、唔拖長", p: "入聲音節拖長就會變成另一個字，所以寧短莫長；收音要乾淨，唔好加一個「啊」尾。" },
+        { h: "同鼻音配成三對", p: "-m ↔ -p（三 saam1／濕 sap1）、-n ↔ -t（新 san1／失 sat1）、-ng ↔ -k（生 saang1／塞 sak1）。記住呢三對，入聲就唔會亂。" }
+      ],
+      checks: [
+        { q: "「百 baak3」嘅韻尾係？", opts: ["-p", "-t", "-k"], a: 2, why: "baak3 尾音係 -k，嘴形停留喺 -k 就收。" },
+        { q: "「三 saam1」同「十 sap6」，邊個係入聲？", opts: ["三", "十", "兩個都係"], a: 1, why: "-m 係鼻音韻尾，-p 才係入聲；所以「十」係入聲。" },
+        { q: "入聲嘅特點係？", opts: ["可以拖長", "短促、收得埋", "一定要讀高音"], a: 1, why: "入聲係短促嘅塞音結尾，唔拖長；高低跟返調號 1／3／6。" }
+      ]
+    },
+    {
+      id: "jy4", name: "長短元音", sub: "aa 長、a 短", mins: 6,
+      blocks: [
+        { h: "aa ＝ 長，a ＝ 短", p: "粵拼用一個字母 a 兩種寫法分長短：aa 係長嘅（三 saam1、街 gaai1），a 係短嘅（心 sam1、計 gai3）。短 a 一定要跟韻尾，唔會單獨出現。" },
+        { h: "最易撞嘅四對", p: "aam／am、aan／an、aai／ai、aau／au。",
+          eg: [{ jy: "saam1／sam1", hz: "三／心", gl: "三／心" }, { jy: "saan1／san1", hz: "山／新", gl: "山／新" },
+               { jy: "gaai3／gai3", hz: "界／計", gl: "界／计算" }, { jy: "gaau1／gau2", hz: "交／九", gl: "交／九" }] },
+        { h: "聽唔出就放慢", p: "長 a 會明顯拖得耐啲；講慢一半再聽一次，分別就出嚟。唔好靠上下文猜，猜慣咗就永遠聽唔出。" }
+      ],
+      checks: [
+        { q: "「心 sam1」嘅 a 係長定短？", opts: ["長 aa", "短 a", "唔關事"], a: 1, why: "sam1 寫一個 a ＝ 短 a；三 saam1 才係長 aa。" },
+        { q: "邊個讀 saam1？", opts: ["三", "心", "森"], a: 0, why: "三 saam1（長 aa）；心 sam1（短 a）；森 sam1 同音。" },
+        { q: "下面邊對係「一長一短」？", opts: ["gaai3／gai3", "gaa1／gaa1", "sik6／sik6"], a: 0, why: "界 gaai3 係長 aai，計 gai3 係短 ai。" }
+      ]
+    },
+    {
+      id: "jy5", name: "聲母難點", sub: "ng-／n-／l-／gw-／z c s j", mins: 6,
+      blocks: [
+        { h: "ng- 要記得讀", p: "我 ngo5、牙 ngaa4、眼 ngaan5 開頭都有一個鼻音 ng。漏咗就變 o5／aa4，聽落唔似粵語。",
+          eg: [{ jy: "ngo5", hz: "我", gl: "我" }, { jy: "ngaa4", hz: "牙", gl: "牙齿" }, { jy: "ngaan5", hz: "眼", gl: "眼睛" }] },
+        { h: "n- 同 l- 唔好懶", p: "你 nei5、男 naam4 開頭係 n；讀成 lei5／laam4 就係懶音。本地人聽得明，但你練嘅時候要分得清。" },
+        { h: "gw- 同 g- 差個圓唇", p: "關 gwaan1、瓜 gwaa1 有圓唇 w；間 gaan1、家 gaa1 冇。",
+          eg: [{ jy: "gwaan1", hz: "關", gl: "关" }, { jy: "gaan1", hz: "間", gl: "间" }] },
+        { h: "z／c／s 同 j", p: "知 zi1、痴 ci1、詩 si1 三個一組；也 jaa5 嘅 j 讀似英文 y。",
+          eg: [{ jy: "zi1", hz: "知", gl: "知道" }, { jy: "ci1", hz: "痴", gl: "粘" }, { jy: "si1", hz: "詩", gl: "诗" }, { jy: "jaa5", hz: "也", gl: "也" }] }
+      ],
+      checks: [
+        { q: "「我」嘅粵拼係？", opts: ["o5", "ngo5", "ngo2"], a: 1, why: "我 ngo5：ng 開頭 ＋ o ＋ 第 5 調（低升）。" },
+        { q: "「關 gwaan1」同「間 gaan1」分別喺邊？", opts: ["聲調", "有冇圓唇 w", "韻尾"], a: 1, why: "兩個調都係 1；分別係 gwaan1 有圓唇 w，gaan1 冇。" },
+        { q: "「你 nei5」讀成 lei5，呢個叫？", opts: ["變調", "懶音", "入聲"], a: 1, why: "n- 讀成 l- 係懶音（香港人口語常見），但初學要分得清。" }
+      ]
+    },
+    {
+      id: "jy6", name: "圓唇韻母 eo／yu／oe", sub: "去 heoi3、魚 jyu4、香 hoeng1", mins: 6,
+      blocks: [
+        { h: "三個圓唇韻母", p: "eo、yu、oe 都要圓唇，但嘴形唔同：yu 個嘴最圓（似吹口哨）。",
+          eg: [{ jy: "heoi3", hz: "去", gl: "去" }, { jy: "jyu4", hz: "魚", gl: "鱼" }, { jy: "hoeng1", hz: "香", gl: "香" }, { jy: "hoe1", hz: "靴", gl: "靴子" }] },
+        { h: "eo 同 oe 好似，其實唔同", p: "eo 後面多數跟 -i（去 heoi3、水 seoi2）；oe 後面跟 -ng／-k（香 hoeng1、腳 goek3）。" },
+        { h: "yu 自己成韻", p: "書 syu1、豬 zyu1、魚 jyu4——呢個 yu 唔會同其他韻尾撞，見到 yu 就直接圓唇讀。",
+          eg: [{ jy: "syu1", hz: "書", gl: "书" }, { jy: "zyu1", hz: "豬", gl: "猪" }] }
+      ],
+      checks: [
+        { q: "「去」嘅粵拼係？", opts: ["heoi3", "hoi3", "heo3"], a: 0, why: "去 heoi3：h ＋ eo ＋ i ＋ 第 3 調。" },
+        { q: "「魚」嘅粵拼係？", opts: ["jyu4", "jyu2", "ju4"], a: 0, why: "魚 jyu4：j ＋ yu ＋ 第 4 調（低降）。" },
+        { q: "下面邊個有 oe？", opts: ["香 hoeng1", "去 heoi3", "書 syu1"], a: 0, why: "hoeng1 中間係 oe；heoi3 係 eo，syu1 係 yu。" }
+      ]
+    },
+    {
+      id: "jy7", name: "變調（口語）", sub: "同一個字，兩個調", mins: 5,
+      blocks: [
+        { h: "口語會變讀第 2 調", p: "好多字嘅本調係 6 或 4，但講成詞嘅時候會變讀高升（第 2 調）。",
+          eg: [{ jy: "daan6 → daan2", hz: "蛋 → 雞蛋", gl: "蛋 → 鸡蛋" },
+               { jy: "jyu4 → jyu2", hz: "魚 → 鹹魚", gl: "鱼 → 咸鱼" },
+               { jy: "min6 → min2", hz: "面 → 樓面", gl: "面 → 楼面" }] },
+        { h: "變調唔算錯", p: "字典收嘅係本調，你耳朵聽到嘅係變調——兩個都對，但講口語要跟變調，否則會似讀課文。" },
+        { h: "記法", p: "唔肯定就撳「粵拼速查」睇一眼。重點係：聽到第 2 調唔好以為自己聽錯。" }
+      ],
+      checks: [
+        { q: "粵語口語變調最常變去邊個調？", opts: ["第 2 調（高升）", "第 4 調（低降）", "第 6 調（低平）"], a: 0, why: "最常見係變讀高升第 2 調，尤其名詞嘅尾字。" },
+        { q: "「雞蛋」嘅「蛋」讀？", opts: ["daan6", "daan2", "daan1"], a: 1, why: "本調 daan6，雞蛋口語變讀 daan2。" },
+        { q: "「樓面」嘅「面」讀？", opts: ["min6", "min2", "min4"], a: 1, why: "本調 min6（面），樓面變讀 min2。" }
+      ]
+    },
+    {
+      id: "jy8", name: "自己拼一條", sub: "三步拆音 ＋ 實戰", mins: 6,
+      blocks: [
+        { h: "三步拆音", p: "① 搵聲母（冇就係零聲母）② 攞韻母（aa 長、a 短、-p／-t／-k 入聲）③ 加上調號。三分鐘就可以拆完一條。" },
+        { h: "用返你已經識嘅詞", p: "把粵拼當成檢查工具，而唔係要背嘅學問：見到識嘅就當溫故，唔識就撳速查對一次。",
+          eg: [{ jy: "m4 goi1", hz: "唔該", gl: "谢谢" }, { jy: "faan1 gung1", hz: "返工", gl: "上班" },
+               { jy: "sik6 faan6", hz: "食飯", gl: "吃饭" }, { jy: "do1 ze6", hz: "多謝", gl: "谢谢（收礼）" },
+               { jy: "m4 hou2 ji3 si1", hz: "唔好意思", gl: "不好意思" }] },
+        { h: "唔記得就查", p: "任何一題都可以撳「粵拼速查」（聲母／韻母／六調／入聲／變調，全部可以撳出聲）。睇多幾次自然記得。" }
+      ],
+      checks: [
+        { q: "「唔該」嘅粵拼係？", opts: ["m4 goi1", "m4 goi3", "ng4 goi1"], a: 0, why: "唔該 m4 goi1：m4 係零聲母音節，該 goi1 係第 1 調。" },
+        { q: "「食飯」嘅粵拼係？", opts: ["sik6 faan6", "sik1 faan6", "sik6 faan4"], a: 0, why: "食 sik6、飯 faan6，兩個都係第 6 調；sik6 係入聲（-k）。" },
+        { q: "「返工」嘅第一個音節係？", opts: ["faan1", "fan1", "faan3"], a: 0, why: "返 faan1 係長 aa（唔係短 a 的 fan1），第 1 調。" }
+      ]
+    }
+  ],
+
+  /* ---------- 0c. 粵拼速查表（任何一題都可以一鍵打開） ---------- */
+  jyRef: {
+    steps: [
+      "① 睇開頭：聲母。冇輔音就係零聲母（呀 aa3、唔 m4）。",
+      "② 睇中間同結尾：韻母。aa 長、a 短；-p／-t／-k 係入聲，短促收得埋。",
+      "③ 睇最後面嗰個數字：1–6 就係聲調（高平／高升／中平／低降／低升／低平）。"
+    ],
+    groups: [
+      { h: "聲母（19 ＋ 零聲母）", note: "z／c／s 讀「知痴詩」；j 讀似英文 y；gw／kw 要圓唇",
+        items: [
+          { k: "b", ex: "baa1", hz: "爸" }, { k: "p", ex: "paa3", hz: "怕" }, { k: "d", ex: "daa2", hz: "打" }, { k: "t", ex: "taa1", hz: "他" },
+          { k: "g", ex: "gaa1", hz: "家" }, { k: "k", ex: "kaa1", hz: "卡" }, { k: "gw", ex: "gwaa1", hz: "瓜" }, { k: "kw", ex: "kwaa1", hz: "誇" },
+          { k: "w", ex: "waa1", hz: "蛙" }, { k: "z", ex: "zaa1", hz: "渣" }, { k: "c", ex: "caa1", hz: "叉" }, { k: "s", ex: "saa1", hz: "沙" },
+          { k: "j", ex: "jaa5", hz: "也" }, { k: "f", ex: "faa1", hz: "花" }, { k: "h", ex: "haa1", hz: "蝦" }, { k: "l", ex: "laa1", hz: "啦" },
+          { k: "m", ex: "maa1", hz: "媽" }, { k: "n", ex: "naa4", hz: "拿" }, { k: "ng", ex: "ngaa4", hz: "牙" }, { k: "零", ex: "aa3", hz: "呀" }
+        ] },
+      { h: "元音", note: "aa 長、a 短（短 a 一定有韻尾）",
+        items: [
+          { k: "aa", ex: "saa1", hz: "沙" }, { k: "a", ex: "sam1", hz: "心" }, { k: "e", ex: "ce1", hz: "車" }, { k: "i", ex: "si1", hz: "詩" },
+          { k: "o", ex: "bo1", hz: "波" }, { k: "u", ex: "fu2", hz: "苦" }, { k: "oe", ex: "hoeng1", hz: "香" }, { k: "eo", ex: "heoi3", hz: "去" },
+          { k: "yu", ex: "jyu4", hz: "魚" }
+        ] },
+      { h: "韻尾", note: "-m／-n／-ng 鼻音；-p／-t／-k 入聲（短促）",
+        items: [
+          { k: "-i", ex: "gaai3", hz: "界" }, { k: "-u", ex: "gau2", hz: "九" }, { k: "-m", ex: "saam1", hz: "三" }, { k: "-n", ex: "saan1", hz: "山" },
+          { k: "-ng", ex: "saang1", hz: "生" }, { k: "-p", ex: "sap6", hz: "十" }, { k: "-t", ex: "jat1", hz: "一" }, { k: "-k", ex: "baak3", hz: "百" }
+        ] },
+      { h: "易撞對比", note: "差一個字母，意思唔同",
+        items: [
+          { k: "aam／am", ex: "saam1／sam1", hz: "三／心" }, { k: "aan／an", ex: "saan1／san1", hz: "山／新" },
+          { k: "aai／ai", ex: "gaai3／gai3", hz: "界／計" }, { k: "aau／au", ex: "gaau1／gau2", hz: "交／九" },
+          { k: "n／l", ex: "nei5／lei5", hz: "你／（懶音）" }, { k: "eo／oe", ex: "heoi3／hoeng1", hz: "去／香" }
+        ] },
+      { h: "變調", note: "口語常見「變讀第 2 調（高升）」",
+        items: [
+          { k: "蛋", ex: "daan6 → daan2", hz: "雞蛋" }, { k: "魚", ex: "jyu4 → jyu2", hz: "鹹魚" }, { k: "面", ex: "min6 → min2", hz: "樓面" }
+        ] }
+    ]
+  },
+
   /* ---------- 1. 声调校准题：目标音节的调号被隐藏 ---------- */
   /* target = 第几个音节（从 0 起）；ans = 正确调号 */
   toneQuiz: [
-    { hz: "香港", jy: "hoeng1 gong2", target: 0, ans: 1 },
-    { hz: "唔該", jy: "m4 goi1", target: 1, ans: 1 },
-    { hz: "埋單", jy: "maai4 daan1", target: 1, ans: 1 },
-    { hz: "多謝", jy: "do1 ze6", target: 1, ans: 6 },
-    { hz: "冇問題", jy: "mou5 man6 tai4", target: 0, ans: 5 },
-    { hz: "開會", jy: "hoi1 wui2", target: 1, ans: 2 },
-    { hz: "聽日", jy: "ting1 jat6", target: 1, ans: 6 },
-    { hz: "而家", jy: "ji4 gaa1", target: 0, ans: 4 },
-    { hz: "遲啲", jy: "ci4 di1", target: 0, ans: 4 },
-    { hz: "得閒", jy: "dak1 haan4", target: 0, ans: 1 },
-    { hz: "茶餐廳", jy: "caa4 caan1 teng1", target: 0, ans: 4 },
-    { hz: "凍奶茶", jy: "dung3 naai5 caa4", target: 0, ans: 3 },
-    { hz: "幾多錢", jy: "gei2 do1 cin2", target: 0, ans: 2 },
-    { hz: "邊度", jy: "bin1 dou6", target: 1, ans: 6 },
-    { hz: "點解", jy: "dim2 gaai2", target: 0, ans: 2 },
-    { hz: "唔好意思", jy: "m4 hou2 ji3 si1", target: 1, ans: 2 },
-    { hz: "對唔住", jy: "deoi3 m4 zyu6", target: 0, ans: 3 },
-    { hz: "好犀利", jy: "hou2 sai1 lei6", target: 1, ans: 1 },
-    { hz: "眼瞓", jy: "ngaan5 fan3", target: 0, ans: 5 },
-    { hz: "攰", jy: "gui6", target: 0, ans: 6 },
-    { hz: "靚", jy: "leng3", target: 0, ans: 3 },
-    { hz: "返工", jy: "faan1 gung1", target: 0, ans: 1 },
-    { hz: "屋企", jy: "uk1 kei2", target: 1, ans: 2 },
-    { hz: "雪櫃", jy: "syut3 gwai6", target: 0, ans: 3 }
+    { hz: "香港", jy: "hoeng1 gong2", target: 0, ans: 1, gl: "香港（地名）" },
+    { hz: "唔該", jy: "m4 goi1", target: 1, ans: 1, gl: "谢谢／麻烦你（劳烦别人）" },
+    { hz: "埋單", jy: "maai4 daan1", target: 1, ans: 1, gl: "结账" },
+    { hz: "多謝", jy: "do1 ze6", target: 1, ans: 6, gl: "谢谢（收礼物／道谢）" },
+    { hz: "冇問題", jy: "mou5 man6 tai4", target: 0, ans: 5, gl: "没问题" },
+    { hz: "開會", jy: "hoi1 wui2", target: 1, ans: 2, gl: "开会" },
+    { hz: "聽日", jy: "ting1 jat6", target: 1, ans: 6, gl: "明天" },
+    { hz: "而家", jy: "ji4 gaa1", target: 0, ans: 4, gl: "现在" },
+    { hz: "遲啲", jy: "ci4 di1", target: 0, ans: 4, gl: "待会儿／晚点" },
+    { hz: "得閒", jy: "dak1 haan4", target: 0, ans: 1, gl: "有空" },
+    { hz: "茶餐廳", jy: "caa4 caan1 teng1", target: 0, ans: 4, gl: "茶餐厅（港式快餐店）" },
+    { hz: "凍奶茶", jy: "dung3 naai5 caa4", target: 0, ans: 3, gl: "冰奶茶" },
+    { hz: "幾多錢", jy: "gei2 do1 cin2", target: 0, ans: 2, gl: "多少钱" },
+    { hz: "邊度", jy: "bin1 dou6", target: 1, ans: 6, gl: "哪里" },
+    { hz: "點解", jy: "dim2 gaai2", target: 0, ans: 2, gl: "为什么" },
+    { hz: "唔好意思", jy: "m4 hou2 ji3 si1", target: 1, ans: 2, gl: "不好意思／抱歉" },
+    { hz: "對唔住", jy: "deoi3 m4 zyu6", target: 0, ans: 3, gl: "对不起" },
+    { hz: "好犀利", jy: "hou2 sai1 lei6", target: 1, ans: 1, gl: "很厉害" },
+    { hz: "眼瞓", jy: "ngaan5 fan3", target: 0, ans: 5, gl: "困／想睡" },
+    { hz: "攰", jy: "gui6", target: 0, ans: 6, gl: "累／疲倦" },
+    { hz: "靚", jy: "leng3", target: 0, ans: 3, gl: "漂亮" },
+    { hz: "返工", jy: "faan1 gung1", target: 0, ans: 1, gl: "上班" },
+    { hz: "屋企", jy: "uk1 kei2", target: 1, ans: 2, gl: "家／屋里" },
+    { hz: "雪櫃", jy: "syut3 gwai6", target: 0, ans: 3, gl: "冰箱" }
   ],
 
   /* ---------- 2. 最小对比：练音素颗粒度 ---------- */

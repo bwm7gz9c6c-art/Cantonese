@@ -69,7 +69,8 @@
       '<div class="bar"><i style="width:' + Math.round((ri.passed / ri.total) * 100) + '%"></i></div>' +
       '<div class="chips"><button class="chip" data-act="album">詞卡冊　' + got + " / " + totalCards + "</button>" +
       '<button class="chip" data-act="free">自由練習（八塊）</button>' +
-      '<button class="chip" data-act="place">12 題定級測試</button></div></div></div>';
+      '<button class="chip" data-act="place">12 題定級測試</button>' +
+      '<button class="chip" data-act="ref">粵拼速查</button></div></div></div>';
 
     G.zones.forEach(function (z, zi) {
       var done = 0, lv = "";
@@ -83,7 +84,7 @@
             : '<span class="lvs">' + (rec ? starsHTML(rec.stars) + "　" + rec.acc + "%" : "　") + "</span>") +
           "</button>";
       });
-      h += '<div class="zone"><div class="zh2"><span class="zi">' + (zi + 1) + "</span>" +
+      h += '<div class="zone"><div class="zh2"><span class="zi">' + e(z.zi != null ? z.zi : (zi + 1)) + "</span>" +
         '<b>' + e(z.name) + "</b>" + (z.life ? '<span class="life">計命</span>' : '<span class="life no">唔計命</span>') +
         '<span class="dim zsub">' + e(z.sub) + "</span></div>" +
         '<div class="zmeta">' + done + " / " + z.levels.length + ' 關通關</div>' +

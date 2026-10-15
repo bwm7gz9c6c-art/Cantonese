@@ -23,6 +23,7 @@
     </div>
   </div>
   <div class="top-right">
+    <button id="btnRef" class="chip" title="粵拼速查：聲母／韻母／六調／入聲／變調，可撳出聲">粵拼速查</button>
     <button id="voiceChip" class="chip" title="点击检测／选择粤语语音">检测语音</button>
     <button id="btnSettings" class="chip">設定</button>
   </div>
@@ -45,7 +46,7 @@
 
 <footer class="foot">
   <span id="footStat"></span>
-  <span class="dim">内容层：<code>data.js</code>（題庫）＋ <code>lexicon.js</code>（詞庫）＋ <code>speak.js</code>（口語層）＋ <code>game.js</code>（關卡・段位・詞卡）＋ <code>ai.js</code>（AI 提示詞／定級題）　发现粤拼有误直接改那一行</span>
+  <span class="dim">内容层：<code>data.js</code>（題庫＋⓪粵拼入門＋速查表）＋ <code>lexicon.js</code>（詞庫）＋ <code>speak.js</code>（口語層）＋ <code>game.js</code>（關卡・段位・詞卡）＋ <code>ai.js</code>（AI 提示詞／定級題）　发现粤拼有误直接改那一行</span>
 </footer>
 
 <!-- 设置面板 -->
@@ -134,6 +135,9 @@
     <button id="btnCloseList" class="btn small">关闭</button>
   </div>
 </div>
+
+<!-- 粵拼速查表：任何題目／任何頁面都可以一鍵打開（內容由 app.js 注入） -->
+<div id="refbox" class="refwrap hidden"></div>
 
 <script src="data.js"></script>
 <script src="lexicon.js"></script>

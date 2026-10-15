@@ -16,10 +16,24 @@
   /* 哪些題型「快答」——只有這些答錯會扣命、才計連擊（使用者選 A：練耳朵的題不罰） */
   var FAST = { drill: 1, word: 1, usage: 1, oral: 1 };
 
-  /* 關卡地圖：每一 zone 有若干關（level）。pool 用規則描述，由 resolvePool 展開成題目清單。 */
+  /* 關卡地圖：每一 zone 有若干關（level）。pool 用規則描述，由 resolvePool 展開成題目清單。
+     zi = 地圖上顯示嘅區號（⓪ 係選修嘅粵拼入門，所以其他區唔會重新編號）。 */
   var zones = [
     {
-      id: "tone", name: "聲調校準", sub: "調號 ↔ 音高，整個地基", life: false,
+      id: "jy", zi: "⓪", name: "粵拼入門", sub: "8 節小課，唔識粵拼先上；整區可以跳過", life: false,
+      levels: [
+        { id: "jy1", name: "一條粵拼點讀", teach: 0, pool: { kind: "jy", lesson: 0 }, n: 3 },
+        { id: "jy2", name: "六個調", teach: 1, pool: { kind: "jy", lesson: 1 }, n: 3 },
+        { id: "jy3", name: "入聲 -p／-t／-k", teach: 2, pool: { kind: "jy", lesson: 2 }, n: 3 },
+        { id: "jy4", name: "長短元音", teach: 3, pool: { kind: "jy", lesson: 3 }, n: 3 },
+        { id: "jy5", name: "聲母難點", teach: 4, pool: { kind: "jy", lesson: 4 }, n: 3 },
+        { id: "jy6", name: "圓唇韻母", teach: 5, pool: { kind: "jy", lesson: 5 }, n: 3 },
+        { id: "jy7", name: "變調（口語）", teach: 6, pool: { kind: "jy", lesson: 6 }, n: 3 },
+        { id: "jy8", name: "自己拼一條", teach: 7, pool: { kind: "jy", lesson: 7 }, n: 3 }
+      ]
+    },
+    {
+      id: "tone", zi: 1, name: "聲調校準", sub: "調號 ↔ 音高，整個地基", life: false,
       levels: [
         { id: "tone1", name: "兩調對比", pool: { kind: "tone", from: 0, to: 7 }, n: 8 },
         { id: "tone2", name: "三調分辨", pool: { kind: "tone", from: 8, to: 15 }, n: 8 },
@@ -27,7 +41,7 @@
       ]
     },
     {
-      id: "pair", name: "音素顆粒", sub: "aam/am、-p/-t/-k、ng-、n-/l-", life: false,
+      id: "pair", zi: 2, name: "音素顆粒", sub: "aam/am、-p/-t/-k、ng-、n-/l-", life: false,
       levels: [
         { id: "pair1", name: "長短元音", pool: { kind: "pair", from: 0, to: 6 }, n: 7 },
         { id: "pair2", name: "入聲韻尾", pool: { kind: "pair", from: 7, to: 13 }, n: 7 },
@@ -35,7 +49,7 @@
       ]
     },
     {
-      id: "drill", name: "主動提取", sub: "中文 → 粵語，修那條斷掉的單向通路", life: true,
+      id: "drill", zi: 3, name: "主動提取", sub: "中文 → 粵語，修那條斷掉的單向通路", life: true,
       levels: [
         { id: "drill1", name: "職場", pool: { kind: "drill", scene: "職場" }, n: 10 },
         { id: "drill2", name: "茶餐廳", pool: { kind: "drill", scene: "茶餐廳" }, n: 9 },
@@ -44,7 +58,7 @@
       ]
     },
     {
-      id: "usage", name: "語用地道", sub: "唔該／多謝、語氣詞、語序、懶音", life: true,
+      id: "usage", zi: 4, name: "語用地道", sub: "唔該／多謝、語氣詞、語序、懶音", life: true,
       levels: [
         { id: "usage1", name: "禮貌與稱呼", pool: { kind: "usage", from: 0, to: 5 }, n: 6 },
         { id: "usage2", name: "語氣詞", pool: { kind: "usage", from: 6, to: 11 }, n: 6 },
@@ -52,7 +66,7 @@
       ]
     },
     {
-      id: "word", name: "港式詞彙（295 條）", sub: "認得但講唔出 → 逼自己講出來", life: true,
+      id: "word", zi: 5, name: "港式詞彙（295 條）", sub: "認得但講唔出 → 逼自己講出來", life: true,
       levels: [
         { id: "word1", name: "職場", pool: { kind: "word", cat: "職場" }, n: 10 },
         { id: "word2", name: "茶餐廳", pool: { kind: "word", cat: "茶餐廳" }, n: 10 },
@@ -63,7 +77,7 @@
       ]
     },
     {
-      id: "speak", name: "講嘢（口語輸出）", sub: "先出聲，再揭曉，可以錄音比對", life: false,
+      id: "speak", zi: 6, name: "講嘢（口語輸出）", sub: "先出聲，再揭曉，可以錄音比對", life: false,
       levels: [
         { id: "speak1", name: "跟讀熱身", pool: { kind: "shadow", from: 0, to: 8 }, n: 8 },
         { id: "speak2", name: "跟讀進階", pool: { kind: "shadow", from: 9, to: 17 }, n: 8 },
@@ -94,6 +108,7 @@
       if (pool.to != null && i > pool.to) continue;
       if (pool.scene != null && x.scene !== pool.scene) continue;
       if (pool.cat != null && x.cat !== pool.cat) continue;
+      if (pool.lesson != null && x.lesson !== pool.lesson) continue;
       out.push({ kind: kind, i: i, x: x });
     }
     return out;

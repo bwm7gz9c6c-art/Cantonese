@@ -12,13 +12,28 @@
   var G = window.CANTO_GAME || null;            /* 遊戲層內容：段位／關卡／Boss */
   var GC = window.CANTO_GAMEUI || null;         /* 遊戲層 UI */
   var SFX = window.CANTO_SFX || null;           /* 音效層（WebAudio 合成） */
+  /* ⓪ 粵拼入門：8 節小測攤平成一個題池（kind "jy"），每題記住自己屬邊一節 */
+  var JYQ = (function () {
+    var out = [], c = D.jyCourse || [], li, ci, L, q;
+    for (li = 0; li < c.length; li++) {
+      L = c[li];
+      for (ci = 0; ci < (L.checks || []).length; ci++) {
+        q = L.checks[ci];
+        out.push({
+          lesson: li, lessonId: L.id, lessonName: L.name,
+          q: q.q, opts: q.opts, ans: q.opts[q.a], why: q.why
+        });
+      }
+    }
+    return out;
+  })();
   var IDX = {
     tone: D.toneQuiz, pair: D.pairs, drill: D.drill, usage: D.usageQuiz, word: (D.lexicon ? D.lexicon.rows : []),
-    oral: SP.oralQuiz, shadow: SP.shadow, role: SP.roleTurns
+    oral: SP.oralQuiz, shadow: SP.shadow, role: SP.roleTurns, jy: JYQ
   };
   var LABEL = {
     tone: "聲調", pair: "音素", drill: "主動提取", usage: "語用", word: "詞彙",
-    oral: "口語", shadow: "跟讀", role: "對話"
+    oral: "口語", shadow: "跟讀", role: "對話", jy: "粵拼"
   };
   var SCENES = ["全部", "職場", "茶餐廳", "出行", "社交"];
   var LCATS = (D.lexicon ? D.lexicon.cats : []);
@@ -173,6 +188,7 @@
     if (kind === "word") return { kind: "word", idx: idx, item: item };
     if (kind === "shadow") return { kind: "shadow", idx: idx, item: item };
     if (kind === "role") return { kind: "role", idx: idx, item: item };
+    if (kind === "jy") return { kind: "jy", idx: idx, item: item, opts: shuffle(item.opts) };
     var aFirst = Math.random() < 0.5;
     var play = aFirst ? item.a : item.b;
     var list = aFirst
@@ -239,6 +255,7 @@
 
   /* ---------------- 状态 ---------------- */
   var sess = null, route = "home", pairMode = "listen", drillScene = "全部", lexCat = "全部", wordCat = "全部", speakScene = "全部";
+  var lessonOpen = null, refOpen = false;
 
   function start(kind, n) {
     n = n || Number(S.settings.len) || 12;
@@ -247,8 +264,8 @@
   }
   function go(r) {
     route = r; sess = null; render();
-    var bs = document.querySelectorAll("#tabs button"), i;
-    for (i = 0; i < bs.length; i++) bs[i].classList.toggle("active", bs[i].getAttribute("data-route") === r);
+    var bs = document.querySelectorAll("#tabs button"), i, tgt = (r === "lesson" || r === "album") ? "home" : r;
+    for (i = 0; i < bs.length; i++) bs[i].classList.toggle("active", bs[i].getAttribute("data-route") === tgt);
     window.scrollTo(0, 0);
   }
 
@@ -307,6 +324,7 @@
       if (GC) GC.album($("gameroot"), GCTX); else v.innerHTML = freeHTML();
     }
     else if (route === "free") v.innerHTML = freeHTML();
+    else if (route === "lesson") v.innerHTML = lessonHTML();
     else if (route === "tone") v.innerHTML = toneIntroHTML();
     else if (route === "pair") v.innerHTML = pairIntroHTML();
     else if (route === "drill") v.innerHTML = drillIntroHTML();
@@ -333,6 +351,84 @@
     placement: function () { if (window.CANTO_AI) { go("ai"); window.CANTO_AI.startPlacement(); } },
     ai: function () { go("ai"); }
   };
+
+  /* ---------------- ⓪ 粵拼入門（教學頁 ＋ 全站速查表） ---------------- */
+  /* 例字要發音時，只讀漢字部分：去掉「 → 」後半同括號註解 */
+  function sayText(s) { return String(s == null ? "" : s).split(" → ")[0].replace(/（[^）]*）/g, "").trim(); }
+
+  function lessonHTML() {
+    var c = D.jyCourse || [];
+    if (!lessonOpen) return freeHTML();
+    var L = c[lessonOpen.teach];
+    if (!L) return freeHTML();
+    var h = '<div class="card lead lesson"><div class="lhead"><span class="lnum">⓪ 粵拼入門</span>' +
+      '<h1 class="lname">' + esc(L.name) + "</h1>" +
+      '<div class="lsub dim">第 ' + (lessonOpen.teach + 1) + "／" + c.length + " 節 · " + esc(L.sub) + " · 約 " + L.mins + " 分鐘</div></div>";
+    (L.blocks || []).forEach(function (b) {
+      h += '<div class="lblock"><h4>' + esc(b.h) + "</h4><p>" + esc(b.p) + "</p>";
+      if (b.eg && b.eg.length) {
+        h += '<div class="legs">' + b.eg.map(function (g) {
+          return '<button class="leg" data-act="play" data-text="' + esc(sayText(g.hz)) + '">' +
+            '<span class="hz">' + esc(g.hz) + '</span><span class="jy">' + esc(g.jy) + "</span>" +
+            '<span class="gl dim">' + esc(g.gl) + "</span></button>";
+        }).join("") + "</div>";
+      }
+      h += "</div>";
+    });
+    h += '<div class="actions" style="justify-content:flex-start;margin-top:16px">' +
+      '<button class="btn" data-act="lessonstart">開始 ' + ((L.checks || []).length) + ' 題小測 →</button>' +
+      '<button class="btn ghost" data-act="ref">粵拼速查</button>' +
+      '<button class="btn ghost" data-act="home">跳過呢一區，返地圖</button></div>' +
+      '<p class="dim small">⓪ 區係選修：跳過都得，之後任何一題都可以撳「粵拼速查」。</p></div>';
+    return h;
+  }
+
+  function refHTML() {
+    var R = D.jyRef || { steps: [], groups: [] }, T = D.toneTable || [];
+    var h = '<div class="refhead"><h3>粵拼速查</h3>' +
+      '<span class="dim small">任何時候都開得，唔使離開題目</span>' +
+      '<button class="btn ghost small" data-act="refclose">閂埋</button></div>' +
+      '<ol class="refsteps">' + (R.steps || []).map(function (s) { return "<li>" + esc(s) + "</li>"; }).join("") + "</ol>" +
+      '<h4>六個調（撳一下聽）</h4><div class="reftones">' + T.map(function (t) {
+        return '<button class="reftone" data-act="play" data-text="' + esc(t.ex) + '">' +
+          '<span class="tn">' + t.n + '</span><span class="hz">' + esc(t.ex) + '</span>' +
+          '<span class="jy">' + esc(t.jy) + '</span><span class="dim refc">' + esc(t.name + " " + t.contour) + "</span></button>";
+      }).join("") + "</div>";
+    (R.groups || []).forEach(function (g) {
+      h += '<h4>' + esc(g.h) + '</h4><p class="dim small refnote">' + esc(g.note) + '</p><div class="refgrid">' +
+        g.items.map(function (it) {
+          return '<button class="refitem" data-act="play" data-text="' + esc(sayText(it.hz)) + '">' +
+            '<span class="rk2">' + esc(it.k) + '</span><span class="jy">' + esc(it.ex) + "</span>" +
+            '<span class="hz">' + esc(it.hz) + "</span></button>";
+        }).join("") + "</div>";
+    });
+    return h;
+  }
+
+  function toggleRef(open) {
+    refOpen = !!open;
+    var box = $("refbox");
+    if (!box) return;
+    if (refOpen && !box.getAttribute("data-filled")) {
+      box.innerHTML = '<div class="refcard">' + refHTML() + "</div>";
+      box.setAttribute("data-filled", "1");
+    }
+    box.classList.toggle("hidden", !refOpen);
+    if (SFX) SFX.play("click");
+  }
+
+  function initRef() {
+    var box = $("refbox"), b = $("btnRef");
+    if (b) b.onclick = function () { toggleRef(true); };
+    if (!box || !box.addEventListener) return;
+    box.addEventListener("click", function (e) {
+      var t = e.target.closest ? e.target.closest("[data-act]") : null;
+      if (!t) return;
+      var act = t.getAttribute("data-act");
+      if (act === "refclose") toggleRef(false);
+      else if (act === "play") speak(t.getAttribute("data-text"));
+    });
+  }
 
   /* ---------------- 自由練習（舊首頁，八塊） ---------------- */
   function freeHTML() {
@@ -645,7 +741,7 @@
       var o = IDX[kind] && IDX[kind][i];
       if (!o) return "";
       var title = "", sub = "", audio = "";
-      if (kind === "tone") { title = o.hz; sub = o.jy + "（第 " + o.ans + " 調）"; audio = o.hz; }
+      if (kind === "tone") { title = o.hz; sub = o.jy + "（第 " + o.ans + " 調）" + (o.gl ? " · " + o.gl : ""); audio = o.hz; }
       else if (kind === "pair") { title = o.a.hz + " / " + o.b.hz; sub = o.a.jy + " vs " + o.b.jy + " — " + o.cat; audio = o.a.hz; }
       else if (kind === "drill") { title = o.zh; sub = o.hz + " " + o.jy; audio = o.hz; }
       else if (kind === "word") { title = o.cn; sub = o.hk + " " + o.jy; audio = o.hk; }
@@ -707,6 +803,7 @@
     if (!zone) return;
     var L = zone.levels[li] || zone.levels[0];
     li = zone.levels.indexOf(L);
+    if (L.teach != null) { openLesson(zone, li); return; }
     var qs = shuffle(buildPool(L.pool)).slice(0, L.n);
     sess = {
       kind: "level", qs: qs, i: 0, ok: 0, bad: 0,
@@ -716,8 +813,27 @@
     if (SFX) SFX.play("click");
     render();
   }
-  function comboMult() { return sess && sess.level ? 1 + Math.min(Math.floor(sess.combo / 3), 2) : 1; }
-  function addScore(ok) {
+  /* ⓪ 粵拼入門：先睇教學（route "lesson"），再開始 3 題小測 */
+  function openLesson(zone, li) {
+    var L = zone.levels[li];
+    lessonOpen = { zone: zone.id, li: li, id: L.id, name: L.name, teach: L.teach };
+    go("lesson");
+  }
+  function startLessonQuiz() {
+    if (!lessonOpen) { go("home"); return; }
+    var zone = findZone(lessonOpen.zone);
+    if (!zone) { go("home"); return; }
+    var li = lessonOpen.li, L = zone.levels[li];
+    var qs = shuffle(buildPool(L.pool)).slice(0, L.n);
+    sess = {
+      kind: "level", qs: qs, i: 0, ok: 0, bad: 0,
+      level: { zone: zone.id, li: li, id: L.id, name: L.name, zoneName: zone.name, total: zone.levels.length },
+      lives: 3, combo: 0, maxCombo: 0, score: 0, over: false, pts: ""
+    };
+    if (SFX) SFX.play("click");
+    render();
+  }
+  function comboMult() { return sess && sess.level ? 1 + Math.min(Math.floor(sess.combo / 3), 2) : 1; }  function addScore(ok) {
     if (!sess || !sess.level) return;
     if (ok) {
       sess.combo++;
@@ -794,7 +910,8 @@
     if (sess.i >= sess.qs.length) { renderResult(); return; }
     var q = curQ(), v = view();
     var head = '<div class="qhead"><span>' + (sess.level ? esc(sess.level.name) : sess.kind === "mixed" ? "混合局" : LABEL[q.kind]) + " · 第 " + (sess.i + 1) + "/" + sess.qs.length +
-      '</span><span>✔ ' + sess.ok + "　✘ " + sess.bad + "</span></div>" +
+      '</span><span>✔ ' + sess.ok + "　✘ " + sess.bad + "</span>" +
+      '<button class="chip mini" data-act="ref" title="粵拼速查：聲母／韻母／六調／入聲／變調">粵拼速查</button></div>' +
       '<div class="bar"><i style="width:' + Math.round((sess.i / sess.qs.length) * 100) + '%"></i></div>';
     if (sess.level) {
       head += '<div class="hud"><span class="hl">命 ' + sess.lives + '</span>' +
@@ -806,12 +923,19 @@
     if (q.kind === "tone") {
       v.innerHTML = '<div class="card">' + head +
         '<div class="prompt"><div class="asklbl">聽發音，判斷<b style="color:var(--amber)">黃色</b>那個音節是第幾調</div>' +
-        '<div class="hz">' + q.item.hz + '</div><div class="jy">' + jyWithBlank(q.item.jy, q.item.target) + "</div></div>" +
+        '<div class="hz">' + q.item.hz + '</div><div class="jy">' + jyWithBlank(q.item.jy, q.item.target) + "</div>" +
+        (q.item.gl ? '<div class="mean">意思：' + esc(q.item.gl) + "</div>" : "") + "</div>" +
         '<div class="actions"><button class="btn ghost small" data-act="play" data-text="' + q.item.hz + '">聽多一次</button></div>' +
         '<div class="opts six">' + [1, 2, 3, 4, 5, 6].map(function (n) {
           return '<button class="opt" data-act="opt" data-v="' + n + '">' + n + "</button>";
         }).join("") + "</div><div id='fb'></div></div>";
       speak(q.item.hz);
+    } else if (q.kind === "jy") {
+      v.innerHTML = '<div class="card">' + head +
+        '<div class="prompt"><div class="asklbl">⓪ 粵拼入門 · ' + esc(q.item.lessonName) + '</div><div class="zh">' + esc(q.item.q) + "</div></div>" +
+        '<div class="opts one-col">' + q.opts.map(function (o) {
+          return '<button class="opt" data-act="opt" data-v="' + esc(o) + '">' + esc(o) + "</button>";
+        }).join("") + "</div><div id='fb'></div></div>";
     } else if (q.kind === "pair") {
       var body = pairMode === "listen"
         ? '<div class="prompt"><div class="asklbl">聽發音，選出你聽到的是哪一個</div><div class="hz">聽</div></div>'
@@ -881,7 +1005,8 @@
     } else if (q.kind === "pair") {
       ok = val === q.key;
       fb = '<div class="fb ' + (ok ? "ok" : "no") + '"><span class="tag">' + (ok ? "對" : "錯") + "</span>" +
-        "正確是 <b>" + q.playChar + "</b> " + q.playJy + "，刚才播放的正是它。" +
+        "正確是 <b>" + q.playChar + "</b> " + q.playJy +
+        (q.item[q.key] && q.item[q.key].gl ? "（" + esc(q.item[q.key].gl) + "）" : "") + "，刚才播放的正是它。" +
         '<span class="rule"><b>' + esc(q.item.cat) + "</b> — " + esc(q.item.tip) + "</span></div>";
     } else {
       ok = val === q.item.ans;
@@ -986,8 +1111,20 @@
     else if (act === "home") go("home");
     else if (act === "lang") { S.aiLang = v; save(); render(); }
     else if (act === "lvl") { var z = findZone(b.getAttribute("data-zone")); if (z) startLevel(z, Number(b.getAttribute("data-li")) || 0); }
-    else if (act === "retry") { if (sess && sess.level) startLevel(findZone(sess.level.zone), sess.level.li); }
+    else if (act === "retry") {
+      /* 教學關卡（⓪ 區）「再嚟一次」應該直接重測，唔係返去再讀一次 */
+      if (sess && sess.level) {
+        var rz = findZone(sess.level.zone), rl = rz && rz.levels[sess.level.li];
+        if (rl && rl.teach != null) {
+          lessonOpen = { zone: rz.id, li: sess.level.li, id: rl.id, name: rl.name, teach: rl.teach };
+          startLessonQuiz();
+        } else startLevel(rz, sess.level.li);
+      }
+    }
     else if (act === "place") { if (window.CANTO_AI) { go("ai"); window.CANTO_AI.startPlacement(); } }
+    else if (act === "ref") toggleRef(true);
+    else if (act === "refclose") toggleRef(false);
+    else if (act === "lessonstart") startLessonQuiz();
   });
 
   document.getElementById("tabs").addEventListener("click", function (e) {
@@ -1110,6 +1247,7 @@
   }
 
   /* ---------------- 启动 ---------------- */
+  initRef();
   go("home");
   if (window.CANTO_AI) window.CANTO_AI.maybeAskPlacement(AICTX);
   loadVoices();
