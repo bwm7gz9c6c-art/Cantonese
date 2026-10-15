@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f1419">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="粵語升級器">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232fc08b'/%3E%3Ctext x='16' y='24' font-size='21' text-anchor='middle' fill='%2304140e'%3E%E7%B2%B5%3C/text%3E%3C/svg%3E">
+<title>粵語升級器 · CantoDrill</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <span class="logo">粵</span>
+    <div>
+      <h1>粵語升級器</h1>
+      <p class="sub">为你定制的 L2「识听唔识讲」突破器</p>
+    </div>
+  </div>
+  <div class="top-right">
+    <button id="voiceChip" class="chip" title="点击检测／选择粤语语音">🔊 检测语音</button>
+    <button id="btnSettings" class="chip">⚙️ 设置</button>
+  </div>
+</header>
+
+<div id="voiceWarn" class="warn hidden"></div>
+
+<nav class="tabs" id="tabs">
+  <button data-route="home" class="active">開始</button>
+  <button data-route="tone">① 聲調</button>
+  <button data-route="pair">② 音素</button>
+  <button data-route="drill">③ 主動提取</button>
+  <button data-route="lex">④⑤ 用詞・詞彙</button>
+  <button data-route="speak">⑥ 講嘢</button>
+  <button data-route="progress">進度</button>
+</nav>
+
+<main id="view"></main>
+
+<footer class="foot">
+  <span id="footStat"></span>
+  <span class="dim">内容层：<code>data.js</code>（題庫）＋ <code>lexicon.js</code>（詞庫）＋ <code>speak.js</code>（口語層）　发现粤拼有误直接改那一行</span>
+</footer>
+
+<!-- 设置面板 -->
+<div id="settings" class="drawer hidden">
+  <div class="drawer-inner">
+    <h2>设置</h2>
+
+    <label>粤语语音（zh-HK）
+      <select id="voiceSel"></select>
+    </label>
+
+    <label>语速 <b id="rateVal">0.8</b>×
+      <input id="rate" type="range" min="0.4" max="1.2" step="0.05" value="0.8">
+    </label>
+
+    <div class="row">
+      <button id="btnTest" class="btn small">试听「唔該，埋單」</button>
+      <button id="btnList" class="btn small ghost">列出全部语音</button>
+    </div>
+
+    <label>每局题量 <b id="lenVal">12</b>
+      <input id="len" type="range" min="6" max="30" step="1" value="12">
+    </label>
+
+    <details>
+      <summary>没有粤语语音怎么办？</summary>
+      <p class="dim small">
+        Windows：设置 → 时间和语言 → 语言和区域 → 中文(繁体，香港特别行政区) → 语言选项 → 语音 → 安装。
+        装完刷新本页。装不了也能用：所有题目都有粤拼，只是没有声音。
+      </p>
+    </details>
+
+    <hr>
+    <button id="btnReset" class="btn danger small">清除全部学习进度</button>
+    <button id="btnClose" class="btn small">关闭</button>
+  </div>
+</div>
+
+<div id="voiceList" class="drawer hidden">
+  <div class="drawer-inner">
+    <h2>本机可用语音</h2>
+    <div id="voiceListBody" class="dim small"></div>
+    <button id="btnCloseList" class="btn small">关闭</button>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="lexicon.js"></script>
+<script src="speak.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
