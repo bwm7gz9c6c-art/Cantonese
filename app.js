@@ -23,7 +23,15 @@
 
   /* ---------------- 进度存储 ---------------- */
   function blank() {
-    return { stats: {}, items: {}, wrong: [], days: {}, settings: { voiceURI: "", rate: 0.8, len: 12 }, lexTab: "words", speakTab: "shadow" };
+    return {
+      stats: {}, items: {}, wrong: [], days: {},
+      settings: {
+        voiceURI: "", rate: 0.8, len: 12,
+        apiKey: "", apiBase: "https://api.deepseek.com", apiModel: "deepseek-chat", asrLang: "yue-Hant-HK"
+      },
+      lexTab: "words", speakTab: "shadow",
+      aiLang: "yue", level: 0, placeDone: false, placeAsked: false, placeScore: null, aiStats: { turns: 0 }
+    };
   }
   var S = (function () {
     try {
@@ -171,8 +179,22 @@
   function sample(kind, arr, n, filter) {
     return weightedSample(kind, arr, n, filter).map(function (e) { return makeQ(kind, e); });
   }
+  function mixedPlan() {
+    var lv = Number(S.level) || 2, arr = (D.ai && D.ai.levels) || [], info = arr[lv - 1];
+    return (info && info.plan) ? info.plan
+      : [["tone", 0.30], ["pair", 0.15], ["drill", 0.15], ["word", 0.15], ["usage", 0.08], ["oral", 0.07], ["shadow", 0.10]];
+  }
+  function levelTitle() {
+    var lv = Number(S.level) || 0, arr = (D.ai && D.ai.levels) || [], info = arr[lv - 1];
+    return info ? info.title : "L2 · 識聽唔識講";
+  }
+  function levelLine() {
+    var sc = S.placeScore;
+    if (S.level && sc) return "你上次測到 " + levelTitle() + "（加權 " + sc.ratio + "%）。";
+    return "未測過：做完按你嘅級數配題。";
+  }
   function buildMixed(n) {
-    var plan = [["tone", 0.22], ["pair", 0.12], ["drill", 0.18], ["word", 0.14], ["usage", 0.08], ["oral", 0.12], ["shadow", 0.14]], out = [];
+    var plan = mixedPlan(), out = [];
     plan.forEach(function (p) {
       out = out.concat(sample(p[0], IDX[p[0]], Math.max(1, Math.round(n * p[1]))));
     });
@@ -236,6 +258,38 @@
   }
   function md(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>"); }
 
+  /* ---------------- AI 面板注入 + 界面语言（普通话模式） ---------------- */
+  var SIMP = (D.ai && D.ai.simp) || {};
+  var AICTX = {
+    getS: function () { return S; },
+    save: save,
+    speak: speak,
+    esc: esc,
+    render: render,
+    go: go,
+    start: start
+  };
+  function simpText(s) {
+    var out = "", i, c;
+    for (i = 0; i < s.length; i++) { c = s.charAt(i); out += (SIMP[c] || c); }
+    return out;
+  }
+  function localize() {
+    if (S.aiLang !== "zh" || !document.createTreeWalker) return;
+    var roots = [$("view"), $("tabs")], i;
+    for (i = 0; i < roots.length; i++) {
+      var r = roots[i];
+      if (!r) continue;
+      var w = document.createTreeWalker(r, NodeFilter.SHOW_TEXT, null), n;
+      while ((n = w.nextNode())) {
+        var p = n.parentNode, cls = (p && p.className) ? String(p.className) : "";
+        if (/(^|\s)(hz|jy|cn|zh)(\s|$)/.test(cls)) continue;   // 粤语例句/拼音/词条不动
+        var t = simpText(n.nodeValue);
+        if (t !== n.nodeValue) n.nodeValue = t;
+      }
+    }
+  }
+
   /* ---------------- 路由渲染 ---------------- */
   function render() {
     if (sess) { renderQuiz(); paintFoot(); return; }
@@ -246,7 +300,12 @@
     else if (route === "drill") v.innerHTML = drillIntroHTML();
     else if (route === "lex") v.innerHTML = lexHTML();
     else if (route === "speak") v.innerHTML = speakIntroHTML();
+    else if (route === "ai") {
+      v.innerHTML = '<div id="airoot"></div>';
+      if (window.CANTO_AI) window.CANTO_AI.mount($("airoot"), AICTX);
+    }
     else if (route === "progress") v.innerHTML = progressHTML();
+    localize();
     paintFoot();
   }
 
@@ -254,8 +313,8 @@
   function homeHTML() {
     var n = Number(S.settings.len) || 12;
     return '<div class="card">' +
-      '<h2>你的定級：L2 ·「識聽唔識講」型</h2>' +
-      '<p class="dim small" style="margin-top:0">11 题实测对 4 题、词汇深度 5/7。你的错误分布指向同一个结论——<b>听力是「语境解码」不是「音素解析」</b>，所以听得懂港剧却说不出口。下面六块，每一块都直接打在你实测暴露的那个洞上。</p>' +
+      '<h2>你的定級：' + esc(levelTitle()) + '</h2>' +
+      '<p class="dim small" style="margin-top:0">11 题实测对 4 题、词汇深度 5/7。你的错误分布指向同一个结论——<b>听力是「语境解码」不是「音素解析」</b>，所以听得懂港剧却说不出口。下面八块，每一块都直接打在你实测暴露的那个洞上。</p>' +
       '<div class="grid" style="margin-top:12px">' +
       '<div class="mod" data-act="start" data-kind="mixed" data-n="' + n + '" style="border-color:var(--jade)"><b>▶ 開始 ' + n + ' 題混合局</b><span>约 3 分钟。七块按你错题权重抽题，随时进随时练。</span></div>' +
       '<div class="mod" data-act="start" data-kind="tone" data-n="8"><b>① 聲調校准</b><span>你唯一的硬缺口：调号 ↔ 音高没接上。地基，先砸。</span></div>' +
@@ -264,6 +323,8 @@
       '<div class="mod" data-act="start" data-kind="usage" data-n="6"><b>④ 語用與地道度</b><span>唔該/多謝、語氣詞、語序、懒音。你实测错最多的类型。</span></div>' +
       '<div class="mod" data-act="start" data-kind="word" data-all="1" data-n="10"><b>⑤ 港式詞彙庫（約 300 條）</b><span>職場／茶餐廳／出行／社交／日常起居／形容與時間。普通話 → 粵語，專治「認得但講唔出」。</span></div>' +
       '<div class="mod" data-act="start" data-kind="shadow" data-all="1" data-n="8" style="border-color:var(--jade)"><b>⑥ 講嘢（口語輸出）</b><span>跟讀 26 句＋語氣詞＋情境對話。練嘴巴的那一塊：先出聲，再揭曉，能錄音比對。</span></div>' +
+      '<div class="mod" data-act="go" data-v="ai" style="border-color:var(--jade)"><b>⑦ AI 陪練（香港本地人）</b><span>同 AI 傾偈：佢全程講粵語、糾正你嘅用詞同語序，仲可以做「跟讀校準」。要填一次 DeepSeek key。</span></div>' +
+      '<div class="mod" data-act="place"><b>⑧ 12 題定級測試</b><span>' + levelLine() + '約 4 分鐘，做完混合局就按你嘅級數配題。</span></div>' +
       '</div></div>' +
       '<div class="card"><h3>定级证据（你答过的原题）</h3>' +
       '<table><tr><th>你选了</th><th>正确</th><th>暴露的问题</th></tr>' +
@@ -577,6 +638,13 @@
       "<div><b>" + acc + "%</b><span>總正確率</span></div>" +
       "<div><b>" + total + "</b><span>累計題數</span></div></div>" +
       '<div style="margin-top:14px">' + mods + "</div></div>" +
+      '<div class="card"><h2>等級與 AI 陪練</h2>' +
+      '<p class="small">' + esc(levelTitle()) +
+      (S.placeScore ? '<span class="dim">　12 題測到 ' + S.placeScore.ratio + "%（" + S.placeScore.ok + "/" + S.placeScore.n + "）</span>" : '<span class="dim">　仲未做定級測試</span>') + "</p>" +
+      '<p class="dim small">AI 對話 ' + ((S.aiStats && S.aiStats.turns) || 0) + " 輪。</p>" +
+      '<div class="actions" style="justify-content:flex-start">' +
+      '<button class="btn ghost small" data-act="place">重新做 12 題定級測試</button>' +
+      '<button class="btn ghost small" data-act="go" data-v="ai">去 AI 陪練</button></div></div>' +
       '<div class="card"><h2>錯題本（' + S.wrong.length + "）</h2>" + wrongHTML +
       '<div class="actions" style="justify-content:flex-start">' +
       '<button class="btn" data-act="start" data-kind="mixed" data-n="12">用混合局清錯題</button>' +
@@ -771,6 +839,8 @@
     else if (act === "next") nextQ();
     else if (act === "again") start(sess.kind);
     else if (act === "home") go("home");
+    else if (act === "lang") { S.aiLang = v; save(); render(); }
+    else if (act === "place") { if (window.CANTO_AI) { go("ai"); window.CANTO_AI.startPlacement(); } }
   });
 
   document.getElementById("tabs").addEventListener("click", function (e) {
@@ -813,8 +883,31 @@
     S = blank(); save(); $("settings").classList.add("hidden"); go("home");
   };
 
+  /* ---------------- AI 与语言设置 ---------------- */
+  var langSel = $("aiLangSel");
+  if (langSel) {
+    langSel.value = S.aiLang || "yue";
+    langSel.onchange = function () { S.aiLang = this.value; save(); render(); };
+  }
+  var keySet = $("aiKeySet");
+  if (keySet) {
+    keySet.value = S.settings.apiKey || "";
+    keySet.onchange = function () { S.settings.apiKey = this.value.trim(); save(); };
+  }
+  var modelSet = $("aiModelSet");
+  if (modelSet) {
+    modelSet.value = S.settings.apiModel || "deepseek-chat";
+    modelSet.onchange = function () { S.settings.apiModel = this.value.trim() || "deepseek-chat"; save(); };
+  }
+  var asrSet = $("asrLangSel");
+  if (asrSet) {
+    asrSet.value = S.settings.asrLang || "yue-Hant-HK";
+    asrSet.onchange = function () { S.settings.asrLang = this.value; save(); };
+  }
+
   /* ---------------- 启动 ---------------- */
   go("home");
+  if (window.CANTO_AI) window.CANTO_AI.maybeAskPlacement(AICTX);
   loadVoices();
   if ("speechSynthesis" in window) window.speechSynthesis.onvoiceschanged = loadVoices;
   setTimeout(loadVoices, 500);

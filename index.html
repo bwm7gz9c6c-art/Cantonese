@@ -36,6 +36,7 @@
   <button data-route="drill">③ 主動提取</button>
   <button data-route="lex">④⑤ 用詞・詞彙</button>
   <button data-route="speak">⑥ 講嘢</button>
+  <button data-route="ai">⑦ AI 陪練</button>
   <button data-route="progress">進度</button>
 </nav>
 
@@ -43,7 +44,7 @@
 
 <footer class="foot">
   <span id="footStat"></span>
-  <span class="dim">内容层：<code>data.js</code>（題庫）＋ <code>lexicon.js</code>（詞庫）＋ <code>speak.js</code>（口語層）　发现粤拼有误直接改那一行</span>
+  <span class="dim">内容层：<code>data.js</code>（題庫）＋ <code>lexicon.js</code>（詞庫）＋ <code>speak.js</code>（口語層）＋ <code>ai.js</code>（AI 提示詞／定級題）　发现粤拼有误直接改那一行</span>
 </footer>
 
 <!-- 设置面板 -->
@@ -77,6 +78,41 @@
     </details>
 
     <hr>
+    <h3>⑦ AI 陪練 / 語言</h3>
+
+    <label>界面與 AI 語言
+      <select id="aiLangSel">
+        <option value="yue">粵語（繁體，港式口語）</option>
+        <option value="zh">普通话（简体，AI 用普通话解释）</option>
+      </select>
+    </label>
+
+    <label>粵語語音識別（用嚟校準發音）
+      <select id="asrLangSel">
+        <option value="yue-Hant-HK">粵語 yue-Hant-HK（最先試）</option>
+        <option value="zh-HK">zh-HK（本機冇粵語識別時）</option>
+        <option value="zh-CN">zh-CN（最後手段）</option>
+      </select>
+    </label>
+
+    <label>DeepSeek API key（只存本機瀏覽器）
+      <input id="aiKeySet" type="password" autocomplete="off" spellcheck="false" placeholder="sk-...">
+    </label>
+
+    <label>模型
+      <input id="aiModelSet" type="text" spellcheck="false" placeholder="deepseek-chat">
+    </label>
+
+    <details>
+      <summary>AI 陪練點用？點解要 key？</summary>
+      <p class="dim small">
+        本頁係純靜態網頁、冇後端，所以 AI 由你部機嘅瀏覽器直接叫 DeepSeek（api.deepseek.com）。
+        去 platform.deepseek.com 註冊、充 ¥10、建一個 API key，貼上上面個格就得。
+        key 淨係存喺你本機 localStorage，唔會上傳去任何作者伺服器（都冇作者伺服器）。
+      </p>
+    </details>
+
+    <hr>
     <button id="btnReset" class="btn danger small">清除全部学习进度</button>
     <button id="btnClose" class="btn small">关闭</button>
   </div>
@@ -93,6 +129,8 @@
 <script src="data.js"></script>
 <script src="lexicon.js"></script>
 <script src="speak.js"></script>
+<script src="ai.js"></script>
+<script src="aiui.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
