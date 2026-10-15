@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0f1419">
+<meta name="theme-color" content="#0d1211">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="粵語升級器">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232fc08b'/%3E%3Ctext x='16' y='24' font-size='21' text-anchor='middle' fill='%2304140e'%3E%E7%B2%B5%3C/text%3E%3C/svg%3E">
+<meta name="description" content="粤语口语训练器：声调、音素、主动提取、港式词汇、语气词、跟读、AI 陪练（香港本地人角色扮演）。纯静态网页，手机可直接打开。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%230d1211' stroke='%234fb98a'/%3E%3Ctext x='16' y='24' font-size='21' text-anchor='middle' fill='%234fb98a'%3E%E7%B2%B5%3C/text%3E%3C/svg%3E">
 <title>粵語升級器 · CantoDrill</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -18,12 +19,12 @@
     <span class="logo">粵</span>
     <div>
       <h1>粵語升級器</h1>
-      <p class="sub">为你定制的 L2「识听唔识讲」突破器</p>
+      <p class="sub">粵語口語訓練器 · 隨時進，3 分鐘一局</p>
     </div>
   </div>
   <div class="top-right">
-    <button id="voiceChip" class="chip" title="点击检测／选择粤语语音">🔊 检测语音</button>
-    <button id="btnSettings" class="chip">⚙️ 设置</button>
+    <button id="voiceChip" class="chip" title="点击检测／选择粤语语音">检测语音</button>
+    <button id="btnSettings" class="chip">設定</button>
   </div>
 </header>
 
@@ -44,7 +45,7 @@
 
 <footer class="foot">
   <span id="footStat"></span>
-  <span class="dim">内容层：<code>data.js</code>（題庫）＋ <code>lexicon.js</code>（詞庫）＋ <code>speak.js</code>（口語層）＋ <code>ai.js</code>（AI 提示詞／定級題）　发现粤拼有误直接改那一行</span>
+  <span class="dim">内容层：<code>data.js</code>（題庫）＋ <code>lexicon.js</code>（詞庫）＋ <code>speak.js</code>（口語層）＋ <code>game.js</code>（關卡・段位・詞卡）＋ <code>ai.js</code>（AI 提示詞／定級題）　发现粤拼有误直接改那一行</span>
 </footer>
 
 <!-- 设置面板 -->
@@ -103,6 +104,14 @@
       <input id="aiModelSet" type="text" spellcheck="false" placeholder="deepseek-chat">
     </label>
 
+    <label class="check"><input id="autoSpeakSet" type="checkbox"> AI 回話自動朗讀（粵語）</label>
+    <label class="check"><input id="sfxSet" type="checkbox"> 遊戲音效（答對／連擊／通關）</label>
+
+    <div class="row">
+      <button id="btnDiag" class="btn small">一鍵自檢（聲音・麥克風・AI）</button>
+    </div>
+    <div id="diagOut" class="diag hidden"></div>
+
     <details>
       <summary>AI 陪練點用？點解要 key？</summary>
       <p class="dim small">
@@ -129,6 +138,9 @@
 <script src="data.js"></script>
 <script src="lexicon.js"></script>
 <script src="speak.js"></script>
+<script src="sound.js"></script>
+<script src="game.js"></script>
+<script src="gameui.js"></script>
 <script src="ai.js"></script>
 <script src="aiui.js"></script>
 <script src="app.js"></script>

@@ -9,6 +9,9 @@
   var KEY = "cantodrill.v1";
 
   var SP = D.speak || { oralQuiz: [], shadow: [], roleTurns: [], particles: [], tips: [], dialogues: [] };
+  var G = window.CANTO_GAME || null;            /* 遊戲層內容：段位／關卡／Boss */
+  var GC = window.CANTO_GAMEUI || null;         /* 遊戲層 UI */
+  var SFX = window.CANTO_SFX || null;           /* 音效層（WebAudio 合成） */
   var IDX = {
     tone: D.toneQuiz, pair: D.pairs, drill: D.drill, usage: D.usageQuiz, word: (D.lexicon ? D.lexicon.rows : []),
     oral: SP.oralQuiz, shadow: SP.shadow, role: SP.roleTurns
@@ -26,11 +29,12 @@
     return {
       stats: {}, items: {}, wrong: [], days: {},
       settings: {
-        voiceURI: "", rate: 0.8, len: 12,
+        voiceURI: "", rate: 0.8, len: 12, autoSpeak: true, sfx: true,
         apiKey: "", apiBase: "https://api.deepseek.com", apiModel: "deepseek-chat", asrLang: "yue-Hant-HK"
       },
       lexTab: "words", speakTab: "shadow",
-      aiLang: "yue", level: 0, placeDone: false, placeAsked: false, placeScore: null, aiStats: { turns: 0 }
+      aiLang: "yue", level: 0, placeDone: false, placeAsked: false, placeScore: null, aiStats: { turns: 0 },
+      game: { passed: {}, bosses: {}, albumCat: "全部" }
     };
   }
   var S = (function () {
@@ -98,7 +102,7 @@
     var chip = $("voiceChip"), warn = $("voiceWarn");
     if (!chip) return;
     if (!("speechSynthesis" in window)) {
-      chip.textContent = "🔇 瀏覽器不支援語音";
+      chip.textContent = "瀏覽器不支援語音";
       chip.className = "chip off";
       warn.textContent = "这个浏览器不支持 Web Speech API，本 App 只显示文字与粤拼。换 Edge 或 Chrome 即可。";
       warn.classList.remove("hidden");
@@ -106,13 +110,13 @@
     }
     var v = currentVoice();
     if (v) {
-      chip.textContent = "🔊 " + (v.name.split(" - ")[0] || v.name);
+      chip.textContent = (v.name.split(" - ")[0] || v.name);
       chip.className = "chip on";
       warn.classList.add("hidden");
     } else {
-      chip.textContent = "🔇 未檢測到粵語語音";
+      chip.textContent = "未檢測到粵語語音";
       chip.className = "chip off";
-      warn.innerHTML = "<b>没有检测到粤语（zh-HK）语音</b>，题目不会发声。装法：Windows 设置 → 时间和语言 → 语言和区域 → 添加「中文(繁体，香港特别行政区)」→ 语言选项 → 语音 → 安装，然后刷新本页。详见右上角 ⚙️ 设置。";
+      warn.innerHTML = "<b>没有检测到粤语（zh-HK）语音</b>，题目不会发声。装法：Windows 设置 → 时间和语言 → 语言和区域 → 添加「中文(繁体，香港特别行政区)」→ 语言选项 → 语音 → 安装，然后刷新本页。详见右上角 設定。";
       warn.classList.remove("hidden");
     }
     var sel = $("voiceSel");
@@ -294,7 +298,15 @@
   function render() {
     if (sess) { renderQuiz(); paintFoot(); return; }
     var v = view();
-    if (route === "home") v.innerHTML = homeHTML();
+    if (route === "home") {
+      v.innerHTML = '<div id="gameroot"></div>';
+      if (GC) GC.mount($("gameroot"), GCTX); else v.innerHTML = freeHTML();
+    }
+    else if (route === "album") {
+      v.innerHTML = '<div id="gameroot"></div>';
+      if (GC) GC.album($("gameroot"), GCTX); else v.innerHTML = freeHTML();
+    }
+    else if (route === "free") v.innerHTML = freeHTML();
     else if (route === "tone") v.innerHTML = toneIntroHTML();
     else if (route === "pair") v.innerHTML = pairIntroHTML();
     else if (route === "drill") v.innerHTML = drillIntroHTML();
@@ -309,14 +321,29 @@
     paintFoot();
   }
 
-  /* ---------------- 首页 ---------------- */
-  function homeHTML() {
+  /* ---------------- 遊戲層 ctx（交給 gameui.js） ---------------- */
+  var GCTX = {
+    getS: function () { return S; },
+    save: save,
+    esc: esc,
+    speak: speak,
+    go: go,
+    render: render,
+    startLevel: startLevel,
+    placement: function () { if (window.CANTO_AI) { go("ai"); window.CANTO_AI.startPlacement(); } },
+    ai: function () { go("ai"); }
+  };
+
+  /* ---------------- 自由練習（舊首頁，八塊） ---------------- */
+  function freeHTML() {
     var n = Number(S.settings.len) || 12;
-    return '<div class="card">' +
-      '<h2>你的定級：' + esc(levelTitle()) + '</h2>' +
-      '<p class="dim small" style="margin-top:0">11 题实测对 4 题、词汇深度 5/7。你的错误分布指向同一个结论——<b>听力是「语境解码」不是「音素解析」</b>，所以听得懂港剧却说不出口。下面八块，每一块都直接打在你实测暴露的那个洞上。</p>' +
+    return '<div class="card"><div class="actions" style="justify-content:flex-start">' +
+      '<button class="btn ghost small" data-act="go" data-v="home">← 返關卡地圖</button>' +
+      '<button class="btn ghost small" data-act="go" data-v="album">詞卡冊</button></div>' +
+      '<h3 style="margin-top:12px">自由練習（唔計命、唔計星，練手感用）</h3>' +
+      '<p class="dim small">想闖關就返地圖；想隨便練兩分鐘就喺呢度揀。</p>' +
       '<div class="grid" style="margin-top:12px">' +
-      '<div class="mod" data-act="start" data-kind="mixed" data-n="' + n + '" style="border-color:var(--jade)"><b>▶ 開始 ' + n + ' 題混合局</b><span>约 3 分钟。七块按你错题权重抽题，随时进随时练。</span></div>' +
+      '<div class="mod" data-act="start" data-kind="mixed" data-n="' + n + '" style="background:rgba(79,185,138,.1)"><b>開始 ' + n + ' 題混合局</b><span>约 3 分钟。七块按你错题权重抽题，随时进随时练。</span></div>' +
       '<div class="mod" data-act="start" data-kind="tone" data-n="8"><b>① 聲調校准</b><span>你唯一的硬缺口：调号 ↔ 音高没接上。地基，先砸。</span></div>' +
       '<div class="mod" data-act="start" data-kind="pair" data-n="8"><b>② 音素顆粒度</b><span>aam/am、-p/-t/-k、ng-、n-/l-，治「靠上下文猜」。</span></div>' +
       '<div class="mod" data-act="start" data-kind="drill" data-n="10"><b>③ 主動提取</b><span>中文 → 粤语。直接修你那条断掉的单向通路。</span></div>' +
@@ -380,18 +407,18 @@
     }
     return '<div class="card"><h2>② 音素顆粒度（最小對比）</h2>' +
       '<p class="dim small" style="margin-top:0">你听港剧靠上下文补全，所以「听懂 80%」是真的；但把声音拆成音素就失准。这一块专门拆：<b>aam/am、aai/ai、-p/-t/-k、ng-、n-/l-、gw-/g-</b>。每对只差一个特征，逼耳朵做精细分辨。</p>' +
-      '<div class="actions" style="justify-content:flex-start">' + mbtn("listen", "🎧 聽音選字") + mbtn("read", "📖 看粵拼選字") + "</div>" +
+      '<div class="actions" style="justify-content:flex-start">' + mbtn("listen", "聽音選字") + mbtn("read", "看粵拼選字") + "</div>" +
       '<div class="actions" style="justify-content:flex-start">' +
       '<button class="btn" data-act="start" data-kind="pair" data-n="8">開始 8 題</button>' +
       '<button class="btn ghost" data-act="start" data-kind="pair" data-n="16">16 題</button>' +
       "</div></div>" +
-      '<div class="card"><h3>对照表（点 🔊 听）</h3>' +
+      '<div class="card"><h3>对照表（点 听）</h3>' +
       D.pairs.map(function (p) {
         return '<div class="item"><div class="l"><span class="hz">' + p.a.hz + '</span><span class="jy">' + p.a.jy + " · " + esc(p.a.gl) +
           '</span> <span class="dim">vs</span> <span class="hz">' + p.b.hz + '</span><span class="jy">' + p.b.jy + " · " + esc(p.b.gl) + "</span>" +
           '<div class="note"><b>' + esc(p.cat) + "</b> — " + esc(p.tip) + "</div></div>" +
-          '<button class="mini" title="聽 A" data-act="play" data-text="' + p.a.hz + '">🔊</button>' +
-          '<button class="mini" title="聽 B" data-act="play" data-text="' + p.b.hz + '">🔊</button></div>';
+          '<button class="mini" title="聽 A" data-act="play" data-text="' + p.a.hz + '">聽</button>' +
+          '<button class="mini" title="聽 B" data-act="play" data-text="' + p.b.hz + '">聽</button></div>';
       }).join("") + "</div>";
   }
 
@@ -410,12 +437,12 @@
       '<button class="btn" data-act="start" data-kind="drill" data-n="10">開始 10 題（' + drillScene + " · " + cnt + " 條）</button>" +
       '<button class="btn ghost" data-act="start" data-kind="drill" data-n="20">20 題</button>' +
       "</div></div>" +
-      '<div class="card"><h3>全部句子（点 🔊 跟读）</h3>' +
+      '<div class="card"><h3>全部句子（点 跟读）</h3>' +
       D.drill.map(function (x) {
         return '<div class="item"><div class="l"><span class="dim small">[' + x.scene + "]</span> " + esc(x.zh) +
           '<div class="note"><span class="hz">' + x.hz + '</span><span class="jy">' + x.jy + "</span>" +
           '<div style="margin-top:3px">' + esc(x.note) + "</div></div></div>" +
-          '<button class="mini" data-act="play" data-text="' + x.hz + '">🔊</button></div>';
+          '<button class="mini" data-act="play" data-text="' + x.hz + '">聽</button></div>';
       }).join("") + "</div>";
   }
 
@@ -444,7 +471,7 @@
             '<span class="cn">' + esc(x.cn) + '</span> → <span class="hz">' + x.hk + '</span>' +
             '<span class="jy">' + x.jy + '</span>' +
             (x.note ? '<div class="note">' + esc(x.note) + '</div>' : '') + '</div>' +
-            '<button class="mini" data-act="play" data-text="' + x.hk + '">🔊</button></div>';
+            '<button class="mini" data-act="play" data-text="' + x.hk + '">聽</button></div>';
         }).join("");
     } else if (S.lexTab === "thanks") {
       body = "<h3>" + esc(D.usageRule.title) + "</h3>" + D.usageRule.lines.map(function (l) {
@@ -463,7 +490,7 @@
         D.slang.map(function (x) {
           return '<div class="item"><div class="l"><span class="hz">' + x.hz + '</span><span class="jy">' + x.jy + "</span>" +
             '<div class="note">' + esc(x.gl) + "　例：" + esc(x.ex) + "</div></div>" +
-            '<button class="mini" data-act="play" data-text="' + x.hz + '">🔊</button></div>';
+            '<button class="mini" data-act="play" data-text="' + x.hz + '">聽</button></div>';
         }).join("");
     }
     return '<div class="card"><h2>④ 用詞與地道度　⑤ 詞彙庫</h2><div class="actions" style="justify-content:flex-start">' + nav + "</div></div>" +
@@ -491,7 +518,7 @@
     }).join("");
     var head = '<div class="card"><h2>⑥ 講嘢（口語輸出）</h2>' +
       '<p class="dim small" style="margin-top:0">這一塊練的是<b>嘴巴</b>，不是耳朵。規則跟 ③ 一樣：<b>一定要先出聲講，再揭曉</b>。' +
-      '揭曉後有「🎙 錄音比對」——先聽範例，再聽自己那條；差別通常落在<b>聲調尾音</b>跟<b>句末語氣詞</b>這兩處。</p>' +
+      '揭曉後有「錄音比對」——先聽範例，再聽自己那條；差別通常落在<b>聲調尾音</b>跟<b>句末語氣詞</b>這兩處。</p>' +
       '<div class="actions" style="justify-content:flex-start">' + nav + "</div></div>";
     var body = "";
     if (tab === "shadow") {
@@ -506,13 +533,13 @@
         '<div class="actions" style="justify-content:flex-start">' +
         '<button class="btn" data-act="start" data-kind="shadow" data-n="8">開始 8 句（' + speakScene + " · " + list.length + " 條）</button>" +
         '<button class="btn ghost" data-act="start" data-kind="shadow" data-n="16">16 句</button></div>' +
-        '<h3>全部句子（點 🔊 先聽，再自己講一次）</h3>' +
+        '<h3>全部句子（點 先聽，再自己講一次）</h3>' +
         list.map(function (x) {
           return '<div class="item"><div class="l"><span class="dim small">[' + esc(x.scene) + "]</span> " +
             '<span class="hz">' + x.hk + '</span><span class="jy">' + esc(x.jy) + "</span>" +
             '<div class="note">' + esc(x.zh) + "</div>" +
             '<div class="note" style="color:#c9d8e4">港味點：' + esc(x.tip) + "</div></div>" +
-            '<button class="mini" data-act="play" data-text="' + x.hk + '">🔊</button></div>';
+            '<button class="mini" data-act="play" data-text="' + x.hk + '">聽</button></div>';
         }).join("");
     } else if (tab === "oral") {
       body = '<p class="dim small"><b>句末語氣詞</b>是港味的總開關：同一句話，加對語氣詞就是「講嘢」，不加或加錯就是「背書」。' +
@@ -531,13 +558,13 @@
         SP.dialogues.map(function (d, di) {
           return '<h3>' + esc(d.title) + ' <span class="dim small">[' + esc(d.scene) + "]</span></h3>" +
             '<div class="actions" style="justify-content:flex-start">' +
-            '<button class="btn ghost small" data-act="playdlg" data-v="' + di + '">▶ 整段播放</button></div>' +
+            '<button class="btn ghost small" data-act="playdlg" data-v="' + di + '">整段播放</button></div>' +
             d.turns.map(function (t) {
               return '<div class="item"' + (t.s === "y" ? ' style="border-left:3px solid var(--jade)"' : "") + ">" +
                 '<div class="l"><span class="dim small">' + (t.s === "y" ? "你" : "對方") + "</span> " +
                 '<span class="hz">' + t.hk + '</span><span class="jy">' + esc(t.jy) + "</span>" +
                 '<div class="note">' + esc(t.zh) + (t.tip ? "　·　" + esc(t.tip) : "") + "</div></div>" +
-                '<button class="mini" data-act="play" data-text="' + t.hk + '">🔊</button></div>';
+                '<button class="mini" data-act="play" data-text="' + t.hk + '">聽</button></div>';
             }).join("");
         }).join("");
     } else if (tab === "particle") {
@@ -546,7 +573,7 @@
           return '<div class="item"><div class="l"><span class="hz">' + p.hz + '</span><span class="jy">' + esc(p.jy) + "</span>" +
             '<div class="note">' + esc(p.use) + "</div>" +
             '<div class="note" style="color:#c9d8e4">例：' + p.ex + "（" + esc(p.exJy) + "）" + esc(p.exZh) + "</div></div>" +
-            '<button class="mini" data-act="play" data-text="' + p.ex + '">🔊</button></div>';
+            '<button class="mini" data-act="play" data-text="' + p.ex + '">聽</button></div>';
         }).join("");
     } else {
       body = '<p class="dim small">12 條港味口語習慣。這不是知識，是「每次開口都要做的動作」——先挑三條練成條件反射。</p>' +
@@ -554,7 +581,7 @@
           return '<div class="item"><div class="l"><b>' + esc(t.t) + "</b>" +
             '<div class="note">' + esc(t.d) + "</div>" +
             (t.ex ? '<div class="note" style="color:#c9d8e4">例：' + esc(t.ex) + (t.jy ? "（" + esc(t.jy) + "）" : "") + "</div>" : "") +
-            "</div>" + (t.ex ? '<button class="mini" data-act="play" data-text="' + t.ex + '">🔊</button>' : "") + "</div>";
+            "</div>" + (t.ex ? '<button class="mini" data-act="play" data-text="' + t.ex + '">聽</button>' : "") + "</div>";
         }).join("");
     }
     return head + '<div class="card">' + body + "</div>";
@@ -591,12 +618,12 @@
         if (REC.url) URL.revokeObjectURL(REC.url);
         REC.url = URL.createObjectURL(blob);
         var b = $("recbox");
-        if (b) b.innerHTML = '<p class="small" style="color:var(--amber)">先按上面「🔊 聽一次跟讀」聽範例，再聽自己這條——差距通常在<b>聲調尾音</b>和<b>語氣詞</b>。</p>' +
+        if (b) b.innerHTML = '<p class="small" style="color:var(--amber)">先按上面「聽一次跟讀」聽範例，再聽自己這條——差距通常在<b>聲調尾音</b>和<b>語氣詞</b>。</p>' +
           '<audio controls src="' + REC.url + '" style="width:100%;margin:6px 0"></audio>';
       };
       mr.start();
       var b2 = $("recbox");
-      if (b2) b2.innerHTML = '<p class="small" style="color:var(--amber)">🔴 錄音中…念完再按一次「🎙 錄音比對」停止。</p>';
+      if (b2) b2.innerHTML = '<p class="small" style="color:var(--amber)">錄音中…念完再按一次「錄音比對」停止。</p>';
     }).catch(function (err) {
       recFail("拿不到麥克風（" + esc((err && err.name) || "未知錯誤") + "）。不影響練習：大聲跟讀三遍即可。");
     });
@@ -630,7 +657,7 @@
       return '<div class="item"><div class="l"><span class="dim small">[' + (LABEL[kind] || kind) + "]</span> <b>" + esc(title) + "</b>" +
         '<div class="note">' + esc(sub) + "</div>" +
         '<div class="note">錯 ' + (it.bad || 0) + " · 對 " + (it.ok || 0) + "（權重 " + weightOf(id).toFixed(1) + "）</div></div>" +
-        (audio ? '<button class="mini" data-act="play" data-text="' + audio + '">🔊</button>' : "") + "</div>";
+        (audio ? '<button class="mini" data-act="play" data-text="' + audio + '">聽</button>' : "") + "</div>";
     }).join("") : '<p class="dim small">还没有错题。练几局就会在这里堆起来——这就是你的复习队列。</p>';
     return '<div class="card"><h2>進度</h2><div class="stat">' +
       "<div><b>" + (S.days[t] || 0) + "</b><span>今日題數</span></div>" +
@@ -638,6 +665,20 @@
       "<div><b>" + acc + "%</b><span>總正確率</span></div>" +
       "<div><b>" + total + "</b><span>累計題數</span></div></div>" +
       '<div style="margin-top:14px">' + mods + "</div></div>" +
+      '<div class="card"><h2>關卡與段位</h2>' +
+      (GC ? (function () {
+        var ri = GC.rankInfo(GCTX), g = S.game || {}, best = 0, stars = 0, k;
+        for (k in (g.passed || {})) {
+          if (!g.passed[k]) continue;
+          stars += g.passed[k].stars || 0;
+          if ((g.passed[k].score || 0) > best) best = g.passed[k].score;
+        }
+        return '<p class="small">段位 <b>' + esc(ri.rank.name) + '</b>　通關 ' + ri.passed + " / " + ri.total +
+          "　總星數 " + stars + "　單關最高分 " + best + "</p>";
+      })() : '<p class="dim small">遊戲層未載入。</p>') +
+      '<div class="actions" style="justify-content:flex-start">' +
+      '<button class="btn ghost small" data-act="go" data-v="home">返關卡地圖</button>' +
+      '<button class="btn ghost small" data-act="go" data-v="album">詞卡冊</button></div></div>' +
       '<div class="card"><h2>等級與 AI 陪練</h2>' +
       '<p class="small">' + esc(levelTitle()) +
       (S.placeScore ? '<span class="dim">　12 題測到 ' + S.placeScore.ratio + "%（" + S.placeScore.ok + "/" + S.placeScore.n + "）</span>" : '<span class="dim">　仲未做定級測試</span>') + "</p>" +
@@ -651,31 +692,132 @@
       '<button class="btn ghost" data-act="start" data-kind="tone" data-n="8">只練聲調</button></div></div>';
   }
 
+  /* ---------------- 遊戲層對局（關卡／三條命／連擊／分數／結算） ---------------- */
+  function fastKind(kind) { return !!(G && G.FAST[kind]); }
+  function buildPool(pool) {
+    var list = G ? G.resolvePool(pool, IDX) : [];
+    return list.map(function (e) { return makeQ(e.kind, e); });
+  }
+  function findZone(id) {
+    if (!G) return null;
+    for (var i = 0; i < G.zones.length; i++) if (G.zones[i].id === id) return G.zones[i];
+    return null;
+  }
+  function startLevel(zone, li) {
+    if (!zone) return;
+    var L = zone.levels[li] || zone.levels[0];
+    li = zone.levels.indexOf(L);
+    var qs = shuffle(buildPool(L.pool)).slice(0, L.n);
+    sess = {
+      kind: "level", qs: qs, i: 0, ok: 0, bad: 0,
+      level: { zone: zone.id, li: li, id: L.id, name: L.name, zoneName: zone.name, total: zone.levels.length },
+      lives: 3, combo: 0, maxCombo: 0, score: 0, over: false, pts: ""
+    };
+    if (SFX) SFX.play("click");
+    render();
+  }
+  function comboMult() { return sess && sess.level ? 1 + Math.min(Math.floor(sess.combo / 3), 2) : 1; }
+  function addScore(ok) {
+    if (!sess || !sess.level) return;
+    if (ok) {
+      sess.combo++;
+      if (sess.combo > sess.maxCombo) sess.maxCombo = sess.combo;
+      var mult = comboMult(), pts = 100 * mult;
+      sess.score += pts;
+      sess.pts = "+" + pts + (mult > 1 ? "　×" + mult : "");
+      if (SFX) SFX.play(sess.combo >= 3 ? "combo" : "right");
+    } else {
+      sess.combo = 0;
+      sess.pts = "";
+      if (fastKind(curQ().kind)) {
+        sess.lives--;
+        if (sess.lives <= 0) { sess.over = true; if (SFX) SFX.play("lose"); }
+        else if (SFX) SFX.play("wrong");
+      } else if (SFX) SFX.play("wrong");
+    }
+  }
+  function ptsHTML() {
+    if (!sess || !sess.level || !sess.pts) return "";
+    return '<div class="pts">' + sess.pts + "</div>";
+  }
+  function totalPassed() {
+    var g = S.game || {}, n = 0, k;
+    for (k in (g.passed || {})) if (g.passed[k]) n++;
+    for (k in (g.bosses || {})) if (g.bosses[k]) n++;
+    return n;
+  }
+  function renderLevelResult() {
+    var L = sess.level, ans = sess.ok + sess.bad;
+    var acc = ans ? Math.round((sess.ok / ans) * 100) : 0;
+    var stars = G ? G.starFor(acc / 100) : 0;
+    var rating = G ? G.ratingFor(acc / 100) : "-";
+    var pass = stars > 0 && !sess.over;
+    var before = totalPassed();
+    if (pass) {
+      var g = S.game || (S.game = { passed: {}, bosses: {} });
+      var old = g.passed[L.id];
+      g.passed[L.id] = {
+        stars: Math.max(stars, old ? old.stars : 0),
+        acc: Math.max(acc, old ? old.acc : 0),
+        score: Math.max(sess.score, old ? (old.score || 0) : 0),
+        maxCombo: Math.max(sess.maxCombo, old ? (old.maxCombo || 0) : 0),
+        at: Date.now()
+      };
+      save();
+    }
+    var after = totalPassed();
+    var rankUp = (G && G.rankIndex(after) > G.rankIndex(before)) ? G.rankOf(after) : null;
+    var zone = findZone(L.zone), nextL = (zone && zone.levels[L.li + 1]) ? zone.levels[L.li + 1] : null;
+    if (SFX) SFX.play(pass ? (stars === 3 ? "win" : "unlock") : "lose");
+    var say = sess.over ? "命用光了——GAME OVER。呢一關有三條命，答錯要扣；練聲調同跟讀嘅題唔扣，放心慢慢聽。"
+      : rating === "S" ? "全對。呢一關你已經食得住。"
+        : pass ? "過關。錯咗嘅題會自動加權，下次返嚟搵你。"
+          : "差少少（過關線 70%）。再嚟一次就得，唔使怕。";
+    view().innerHTML = '<div class="card lead result"><div class="rgrade g' + rating + '">' + rating + "</div>" +
+      '<h2>' + esc(L.zoneName) + "　" + esc(L.name) + "　" + (pass ? "通關" : "未通關") + "</h2>" +
+      '<p class="dim small" style="margin-top:0">' + say + (rankUp ? "　<b>段位升到「" + esc(rankUp.name) + "」！</b>" : "") + "</p>" +
+      '<div class="stat"><div><b>' + stars + '</b><span>星</span></div><div><b>' + sess.score + "</b><span>分</span></div>" +
+      "<div><b>" + sess.maxCombo + '</b><span>最高連擊</span></div><div><b>' + sess.lives + '</b><span>剩餘命</span></div>' +
+      "<div><b>" + sess.ok + "／" + ans + '</b><span>對／答</span></div><div><b>' + acc + "%</b><span>正確率</span></div></div>" +
+      '<div class="actions" style="justify-content:flex-start">' +
+      (nextL ? '<button class="btn" data-act="lvl" data-zone="' + L.zone + '" data-li="' + (L.li + 1) + '">下一關：' + esc(nextL.name) + "</button>" : "") +
+      '<button class="btn ghost" data-act="retry">再嚟一次</button>' +
+      '<button class="btn ghost" data-act="home">返地圖</button>' +
+      '<button class="btn ghost" data-act="go" data-v="album">睇詞卡冊</button></div></div>';
+    paintFoot();
+  }
+
   /* ---------------- 答题 ---------------- */
   function curQ() { return sess.qs[sess.i]; }
 
   function renderQuiz() {
     if (sess.i >= sess.qs.length) { renderResult(); return; }
     var q = curQ(), v = view();
-    var head = '<div class="qhead"><span>' + (sess.kind === "mixed" ? "混合局" : LABEL[q.kind]) + " · 第 " + (sess.i + 1) + "/" + sess.qs.length +
+    var head = '<div class="qhead"><span>' + (sess.level ? esc(sess.level.name) : sess.kind === "mixed" ? "混合局" : LABEL[q.kind]) + " · 第 " + (sess.i + 1) + "/" + sess.qs.length +
       '</span><span>✔ ' + sess.ok + "　✘ " + sess.bad + "</span></div>" +
       '<div class="bar"><i style="width:' + Math.round((sess.i / sess.qs.length) * 100) + '%"></i></div>';
+    if (sess.level) {
+      head += '<div class="hud"><span class="hl">命 ' + sess.lives + '</span>' +
+        '<span class="hc">連擊 ' + sess.combo + (comboMult() > 1 ? "　×" + comboMult() : "") + "</span>" +
+        '<span class="hs">分 ' + sess.score + "</span>" +
+        '<span class="hn">' + esc(sess.level.zoneName) + "　剩 " + (sess.qs.length - sess.i) + " 題</span></div>";
+    }
 
     if (q.kind === "tone") {
       v.innerHTML = '<div class="card">' + head +
         '<div class="prompt"><div class="asklbl">聽發音，判斷<b style="color:var(--amber)">黃色</b>那個音節是第幾調</div>' +
         '<div class="hz">' + q.item.hz + '</div><div class="jy">' + jyWithBlank(q.item.jy, q.item.target) + "</div></div>" +
-        '<div class="actions"><button class="btn ghost small" data-act="play" data-text="' + q.item.hz + '">🔊 再聽一次</button></div>' +
+        '<div class="actions"><button class="btn ghost small" data-act="play" data-text="' + q.item.hz + '">聽多一次</button></div>' +
         '<div class="opts six">' + [1, 2, 3, 4, 5, 6].map(function (n) {
           return '<button class="opt" data-act="opt" data-v="' + n + '">' + n + "</button>";
         }).join("") + "</div><div id='fb'></div></div>";
       speak(q.item.hz);
     } else if (q.kind === "pair") {
       var body = pairMode === "listen"
-        ? '<div class="prompt"><div class="asklbl">聽發音，選出你聽到的是哪一個</div><div class="hz">🎧</div></div>'
+        ? '<div class="prompt"><div class="asklbl">聽發音，選出你聽到的是哪一個</div><div class="hz">聽</div></div>'
         : '<div class="prompt"><div class="asklbl">讀粵拼，選出對應的字</div><div class="jy" style="font-size:30px">' + esc(q.playJy) + "</div></div>";
       v.innerHTML = '<div class="card">' + head + body +
-        '<div class="actions"><button class="btn ghost small" data-act="play" data-text="' + q.playChar + '">🔊 再聽一次</button></div>' +
+        '<div class="actions"><button class="btn ghost small" data-act="play" data-text="' + q.playChar + '">聽多一次</button></div>' +
         '<div class="opts">' + q.opts.map(function (o) {
           return '<button class="opt" data-act="opt" data-v="' + o.key + '">' + o.hz + '<span class="l2">' + o.jy + " · " + esc(o.gl) + "</span></button>";
         }).join("") + "</div><div id='fb'></div></div>";
@@ -710,7 +852,7 @@
           '<div class="zh">' + sit.hk + '</div><div class="jy" style="font-size:14px">' + esc(sit.jy) + "</div>";
       v.innerHTML = '<div class="card">' + head +
         '<div class="prompt">' + ctx + "</div>" +
-        '<div class="actions">' + (cue ? '<button class="btn ghost small" data-act="play" data-text="' + cue + '">🔊 聽範例</button>' : "") +
+        '<div class="actions">' + (cue ? '<button class="btn ghost small" data-act="play" data-text="' + cue + '">聽範例</button>' : "") +
         '<button class="btn" id="btnReveal" data-act="reveal">揭曉答案</button></div>' +
         '<div id="fb"></div></div>';
       if (cue) speak(cue);
@@ -733,29 +875,30 @@
       ok = Number(val) === q.item.ans;
       var t = D.toneTable[q.item.ans - 1];
       var pos = q.item.jy.split(" ")[q.item.target];
-      fb = '<div class="fb ' + (ok ? "ok" : "no") + '"><span class="tag">' + (ok ? "✔ 對" : "✘ 錯") + "</span>" +
+      fb = '<div class="fb ' + (ok ? "ok" : "no") + '"><span class="tag">' + (ok ? "對" : "錯") + "</span>" +
         esc(pos) + " = 第 <b>" + t.n + "</b> 調 · " + t.name + " · " + t.contour + " " + contourSVG(t.shape) +
         '<span class="rule">锚点：' + esc(t.anchor) + "</span></div>";
     } else if (q.kind === "pair") {
       ok = val === q.key;
-      fb = '<div class="fb ' + (ok ? "ok" : "no") + '"><span class="tag">' + (ok ? "✔ 對" : "✘ 錯") + "</span>" +
+      fb = '<div class="fb ' + (ok ? "ok" : "no") + '"><span class="tag">' + (ok ? "對" : "錯") + "</span>" +
         "正確是 <b>" + q.playChar + "</b> " + q.playJy + "，刚才播放的正是它。" +
         '<span class="rule"><b>' + esc(q.item.cat) + "</b> — " + esc(q.item.tip) + "</span></div>";
     } else {
       ok = val === q.item.ans;
-      fb = '<div class="fb ' + (ok ? "ok" : "no") + '"><span class="tag">' + (ok ? "✔ 對" : "✘ 錯") + "</span>正確答案：<b>" +
+      fb = '<div class="fb ' + (ok ? "ok" : "no") + '"><span class="tag">' + (ok ? "對" : "錯") + "</span>正確答案：<b>" +
         esc(q.item.ans) + '</b><span class="rule">' + esc(q.item.why) + "</span></div>";
     }
     if (ok) sess.ok++; else sess.bad++;
+    addScore(ok);
     record(q.kind, q.idx, ok);
     btn.classList.add(ok ? "right" : "wrong");
     if (!ok) {
       var opts = view().querySelectorAll(".opt"), i, tg = targetOf(q);
       for (i = 0; i < opts.length; i++) if (opts[i].getAttribute("data-v") === tg) opts[i].classList.add("right");
     }
-    $("fb").innerHTML = fb +
+    $("fb").innerHTML = ptsHTML() + fb +
       '<div class="actions"><button class="btn" data-act="next">下一題 →</button>' +
-      (q.kind === "tone" ? '<button class="btn ghost small" data-act="play" data-text="' + q.item.hz + '">🔊 再聽</button>' : "") +
+      (q.kind === "tone" ? '<button class="btn ghost small" data-act="play" data-text="' + q.item.hz + '">再聽</button>' : "") +
       "</div>";
   }
 
@@ -777,8 +920,8 @@
       '<div style="font-size:22px;font-weight:600">' + big + "</div>" +
       '<div style="color:var(--jade);font-size:15px;margin:4px 0 8px">' + it.jy + "</div>" +
       extra + tail + "</div>" +
-      '<div class="actions"><button class="btn ghost small" data-act="play" data-text="' + big + '">🔊 聽一次跟讀</button>' +
-      '<button class="btn ghost small" data-act="rec">🎙 錄音比對</button></div>' +
+      '<div class="actions"><button class="btn ghost small" data-act="play" data-text="' + big + '">聽一次跟讀</button>' +
+      '<button class="btn ghost small" data-act="rec">錄音比對</button></div>' +
       '<div id="recbox"></div>' +
       '<div class="actions" style="flex-direction:column">' +
       '<button class="btn" data-act="grade" data-v="0">脫口而出（已掌握）</button>' +
@@ -793,15 +936,17 @@
     q.graded = true;
     var ok = g === 0;
     if (ok) sess.ok++; else sess.bad++;
+    addScore(ok);
     record(q.kind, q.idx, ok);
     var txt = ["記為「已掌握」，權重已降低。", "記為「半熟」，很快會再見到它。", "記為「不會」，權重已拉高，會優先再出現。"][g];
-    $("fb").innerHTML += '<div class="fb ' + (ok ? "ok" : "no") + '"><span class="tag">已記錄</span>' + txt + "</div>" +
+    $("fb").innerHTML += ptsHTML() + '<div class="fb ' + (ok ? "ok" : "no") + '"><span class="tag">已記錄</span>' + txt + "</div>" +
       '<div class="actions"><button class="btn" data-act="next">下一題 →</button></div>';
   }
 
-  function nextQ() { sess.i++; render(); }
+  function nextQ() { sess.i++; if (sess.over) sess.i = sess.qs.length; render(); }
 
   function renderResult() {
+    if (sess && sess.level) { renderLevelResult(); return; }
     var n = sess.qs.length, acc = n ? Math.round((sess.ok / n) * 100) : 0;
     var missed = S.wrong.length;
     var tip = acc >= 85 ? "這局很順。下一局會把權重壓向還沒掌握的題。"
@@ -840,6 +985,8 @@
     else if (act === "again") start(sess.kind);
     else if (act === "home") go("home");
     else if (act === "lang") { S.aiLang = v; save(); render(); }
+    else if (act === "lvl") { var z = findZone(b.getAttribute("data-zone")); if (z) startLevel(z, Number(b.getAttribute("data-li")) || 0); }
+    else if (act === "retry") { if (sess && sess.level) startLevel(findZone(sess.level.zone), sess.level.li); }
     else if (act === "place") { if (window.CANTO_AI) { go("ai"); window.CANTO_AI.startPlacement(); } }
   });
 
@@ -903,6 +1050,63 @@
   if (asrSet) {
     asrSet.value = S.settings.asrLang || "yue-Hant-HK";
     asrSet.onchange = function () { S.settings.asrLang = this.value; save(); };
+  }
+  var asSpeak = $("autoSpeakSet");
+  if (asSpeak) {
+    asSpeak.checked = S.settings.autoSpeak !== false;
+    asSpeak.onchange = function () { S.settings.autoSpeak = !!this.checked; save(); };
+  }
+  var sfxSet = $("sfxSet");
+  if (sfxSet) {
+    sfxSet.checked = S.settings.sfx !== false;
+    if (SFX) SFX.setMute(S.settings.sfx === false);
+    sfxSet.onchange = function () {
+      S.settings.sfx = !!this.checked; save();
+      if (SFX) { SFX.setMute(!this.checked); SFX.play("click"); }
+    };
+  } else if (SFX) SFX.setMute(S.settings.sfx === false);
+  var btnDiag = $("btnDiag");
+  if (btnDiag) btnDiag.onclick = function () { selfCheck(); };
+
+  /* ---------------- 一键自检：把「为什么没声音 / 不能说话」变成可见的事实 ---------------- */
+  function selfCheck() {
+    var out = $("diagOut");
+    if (!out) return;
+    function row(mark, cls, txt) {
+      return '<div class="r"><span class="k ' + cls + '">' + mark + '</span><span class="vv">' + txt + "</span></div>";
+    }
+    var h = [], tt = window.speechSynthesis;
+    h.push(row(tt ? "✓" : "✗", tt ? "ok" : "no", "语音合成 speechSynthesis：" + (tt ? "支持" : "不支持（换 Chrome／Edge 打开）")));
+    var n = voices.length;
+    h.push(row(n ? "✓" : "✗", n ? "ok" : "no", "读到语音总数：" + n + " 个" + (n ? "" : "（可能还没加载完，等一秒再按一次）")));
+    var zh = voices.filter(function (v) {
+      var l = (v.lang || "").toLowerCase();
+      return l.indexOf("zh") === 0 || l.indexOf("yue") === 0;
+    });
+    h.push(row("·", "", "中文／粤语语音：" + (zh.length
+      ? zh.map(function (v) { return esc(v.name) + " [" + esc(v.lang) + "]"; }).join("、")
+      : "一个都没有 —— 这就是「AI 说不出话」的原因之一")));
+    var cv = currentVoice();
+    h.push(row(cv ? "✓" : "✗", cv ? "ok" : "no", "实际选中的语音：" + (cv
+      ? esc(cv.name) + " [" + esc(cv.lang) + "]"
+      : "没有选中粤语语音（评分 rank<50），会用系统默认音，多半读普通话或者干脆没声")));
+    if (tt) {
+      try { speak("唔該，埋單。"); h.push(row("✓", "ok", "测试朗读：已发送「唔該，埋單。」（能听到声音就是通）")); }
+      catch (e) { h.push(row("✗", "no", "测试朗读失败：" + esc(String((e && e.message) || e)))); }
+    } else h.push(row("✗", "no", "测试朗读：跳过（没有 speechSynthesis）"));
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    h.push(row(SR ? "✓" : "✗", SR ? "ok" : "no", "语音识别（听你说话）：" + (SR
+      ? "支持，当前识别语言 " + esc(S.settings.asrLang)
+      : "不支持 —— iPhone Safari 打开就会这样，换电脑 Chrome 或 Android Chrome")));
+    var MR = !!(window.MediaRecorder && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    h.push(row(MR ? "✓" : "✗", MR ? "ok" : "no", "录音回放（录音比对）：" + (MR ? "支持" : "不支持，或者要用 https／file:// 打开才有麦克风")));
+    var kk = String(S.settings.apiKey || "");
+    h.push(row(kk ? "✓" : "✗", kk ? "ok" : "no", "DeepSeek key：" + (kk
+      ? "已填（" + kk.length + " 个字符，只存本机）"
+      : "未填 —— AI 陪练必须有 key 才会回话，去 platform.deepseek.com 建一个")));
+    h.push(row("·", "", "模型 " + esc(S.settings.apiModel || "deepseek-chat") + "　接口 " + esc(S.settings.apiBase || "https://api.deepseek.com") + "　自动朗读 " + (S.settings.autoSpeak !== false ? "开" : "关")));
+    out.innerHTML = h.join("") + row("→", "", "搞不定就把这一段截图发我。");
+    out.classList.remove("hidden");
   }
 
   /* ---------------- 启动 ---------------- */

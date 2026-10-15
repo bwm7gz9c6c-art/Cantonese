@@ -251,7 +251,7 @@
       (p.zh ? '<div class="note">' + esc(p.zh) + "</div>" : "") +
       (p.fix ? '<div class="fix"><b>糾正：</b>' + esc(p.fix) + "</div>" : "") +
       '<div class="actions" style="justify-content:flex-start">' +
-      '<button class="mini" data-act="play" data-text="' + esc(p.hk) + '">🔊</button></div></div>';
+      '<button class="mini" data-act="play" data-text="' + esc(p.hk) + '">聽</button></div></div>';
   }
 
   function practiceHTML() {
@@ -266,7 +266,7 @@
       '<div class="item"><div class="l"><div class="hz">' + esc(pr.hk) + "</div>" +
       (pr.jy ? '<div class="jy">' + esc(pr.jy) + "</div>" : "") +
       (pr.zh ? '<div class="note">' + esc(pr.zh) + "</div>" : "") + "</div>" +
-      '<button class="mini" data-act="play" data-text="' + esc(pr.hk) + '">🔊</button></div>' +
+      '<button class="mini" data-act="play" data-text="' + esc(pr.hk) + '">聽</button></div>' +
       '<div class="actions" style="justify-content:flex-start">' +
       '<button class="btn" data-act="ai-mic-read">' + T("practiceSay") + "</button>" +
       '<button class="btn ghost small" data-act="ai-practice">' + T("practiceGo") + "</button></div>";
@@ -275,10 +275,10 @@
       if (c.none) out += '<div class="fb no">' + T("compareNo") + "</div>";
       else {
         out += '<div class="fb ' + (c.perfect ? "ok" : "no") + '">' +
-          '<span class="tag">' + (c.perfect ? "✔" : "⚠") + "</span>" +
+          '<span class="tag">' + (c.perfect ? "全對" : "差少少") + "</span>" +
           (c.perfect ? T("compareOk") : tf("comparePart", { ok: c.ok, all: c.all })) +
           '<span class="rule">' + tf("compareDetail", { right: c.rightHTML, heard: c.heardHTML }) + "</span>" +
-          (c.hints.length ? '<span class="rule">💡 ' + esc(c.hints.join("；")) + "</span>" : "") +
+          (c.hints.length ? '<span class="rule">' + esc(c.hints.join("；")) + "</span>" : "") +
           '<span class="rule">' + T("compareTip") + "</span></div>" +
           (pr.judge ? '<div class="msg ai"><div class="who">AI</div><div class="txt">' + esc(pr.judge) + "</div></div>" : "") +
           '<div class="actions" style="justify-content:flex-start">' +
@@ -294,7 +294,7 @@
       '<p class="dim small" style="margin-top:0">' + T("intro") + "</p>" +
       '<div class="actions" style="justify-content:flex-start">' +
       '<button class="btn ghost small" data-act="ai-lang" data-v="' + (lang() === "zh" ? "yue" : "zh") + '">' +
-      (lang() === "zh" ? "🇭🇰 粵語界面" : "🀄 普通话界面") + "</button>" +
+      (lang() === "zh" ? "粵語界面" : "普通话界面") + "</button>" +
       (apiKey() ? '<button class="btn ghost small" data-act="ai-clear">' + T("clear") + "</button>" : "") +
       "</div></div>";
 
@@ -355,7 +355,7 @@
   function placeHead() {
     var n = place.qs.length;
     return '<div class="qhead"><span>' + tf("levelProgress", { i: Math.min(place.i + 1, n), n: n }) + "</span>" +
-      '<span>✔ ' + place.ok + "</span></div>" +
+      '<span>對 ' + place.ok + "</span></div>" +
       '<div class="bar"><i style="width:' + Math.round((place.i / n) * 100) + '%"></i></div>';
   }
   function placeQHTML(q) {
@@ -364,14 +364,14 @@
       return '<div class="card">' + head +
         '<div class="prompt"><div class="asklbl">聽發音，判斷黃色音節係第幾調</div><div class="hz">' + q.item.hz + "</div>" +
         '<div class="jy">' + q.item.jy + "</div></div>" +
-        '<div class="actions"><button class="btn ghost small" data-act="play" data-text="' + esc(q.item.hz) + '">🔊 再聽一次</button></div>' +
+        '<div class="actions"><button class="btn ghost small" data-act="play" data-text="' + esc(q.item.hz) + '">聽多一次</button></div>' +
         '<div class="opts six">' + q.opts.map(function (o) { return '<button class="opt" data-act="ai-opt" data-v="' + o.k + '">' + o.hz + "</button>"; }).join("") + "</div>" +
         '<div id="fb"></div></div>';
     }
     if (q.kind === "pair") {
       return '<div class="card">' + head +
-        '<div class="prompt"><div class="asklbl">聽發音，選出你聽到嘅係邊個</div><div class="hz">🎧</div></div>' +
-        '<div class="actions"><button class="btn ghost small" data-act="play" data-text="' + esc(q.playChar) + '">🔊 再聽一次</button></div>' +
+        '<div class="prompt"><div class="asklbl">聽發音，選出你聽到嘅係邊個</div><div class="hz">聽</div></div>' +
+        '<div class="actions"><button class="btn ghost small" data-act="play" data-text="' + esc(q.playChar) + '">聽多一次</button></div>' +
         '<div class="opts">' + q.opts.map(function (o) {
           return '<button class="opt" data-act="ai-opt" data-v="' + o.k + '">' + o.hz + '<span class="l2">' + esc(o.jy) + " · " + esc(o.gl) + "</span></button>";
         }).join("") + "</div><div id='fb'></div></div>";
@@ -392,7 +392,7 @@
       '<div class="asklbl" style="margin-top:10px">輪到你（意思：' + esc(it.zh) + "）</div>";
     return '<div class="card">' + head + '<div class="prompt">' + cue + "</div>" +
       '<p class="dim small">' + T("spokenPractice") + "</p>" +
-      '<div class="actions">' + (q.kind === "shadow" ? '<button class="btn ghost small" data-act="play" data-text="' + esc(it.hk) + '">🔊 聽範例</button>' : "") +
+      '<div class="actions">' + (q.kind === "shadow" ? '<button class="btn ghost small" data-act="play" data-text="' + esc(it.hk) + '">聽範例</button>' : "") +
       '<button class="btn" id="btnReveal" data-act="ai-reveal">' + T("reveal") + "</button></div>" +
       '<div id="fb"></div></div>';
   }
@@ -415,15 +415,15 @@
       ok = Number(val) === q.item.ans;
       var t = (D.toneTable || [])[q.item.ans - 1] || {};
       var pos = q.item.jy.split(" ")[q.item.target];
-      fb = '<div class="fb ' + (ok ? "ok" : "no") + '"><span class="tag">' + (ok ? "✔ 對" : "✘ 錯") + "</span>" +
+      fb = '<div class="fb ' + (ok ? "ok" : "no") + '"><span class="tag">' + (ok ? "對" : "錯") + "</span>" +
         esc(pos) + " = 第 <b>" + t.n + "</b> 調 · " + esc(t.name) + " · " + esc(t.contour) + "</div>";
     } else if (q.kind === "pair") {
       ok = val === q.key;
-      fb = '<div class="fb ' + (ok ? "ok" : "no") + '"><span class="tag">' + (ok ? "✔ 對" : "✘ 錯") + "</span>" +
+      fb = '<div class="fb ' + (ok ? "ok" : "no") + '"><span class="tag">' + (ok ? "對" : "錯") + "</span>" +
         "正確係 <b>" + esc(q.playChar) + "</b> " + esc(q.playJy) + '<span class="rule"><b>' + esc(q.item.cat) + "</b> — " + esc(q.item.tip) + "</span></div>";
     } else {
       ok = val === q.item.ans;
-      fb = '<div class="fb ' + (ok ? "ok" : "no") + '"><span class="tag">' + (ok ? "✔ 對" : "✘ 錯") + "</span>正確答案：<b>" +
+      fb = '<div class="fb ' + (ok ? "ok" : "no") + '"><span class="tag">' + (ok ? "對" : "錯") + "</span>正確答案：<b>" +
         esc(q.item.ans) + '</b><span class="rule">' + esc(q.item.why || "") + "</span></div>";
     }
     if (ok) { place.ok++; place.earned += q.lv; }
@@ -463,7 +463,7 @@
       '<div style="font-size:22px;font-weight:600">' + esc(big) + "</div>" +
       '<div style="color:var(--jade);font-size:15px;margin:4px 0 8px">' + esc(it.jy) + "</div>" +
       extra + tail + "</div>" +
-      '<div class="actions"><button class="btn ghost small" data-act="play" data-text="' + esc(big) + '">🔊 聽一次跟讀</button></div>' +
+      '<div class="actions"><button class="btn ghost small" data-act="play" data-text="' + esc(big) + '">聽一次跟讀</button></div>' +
       '<div class="actions" style="flex-direction:column">' +
       '<button class="btn" data-act="ai-self" data-v="1">' + T("iGotIt") + "</button>" +
       '<button class="btn ghost" data-act="ai-self" data-v="0">' + T("iMissed") + "</button></div>" +
@@ -572,6 +572,9 @@
       paint();
       var lg = document.getElementById("aiLog");
       if (lg) lg.scrollTop = lg.scrollHeight;
+      /* 自動朗讀：AI 回話入面嘅粵語句（可以在設置裡關掉） */
+      var pa = chat.msgs[chat.msgs.length - 1].parsed;
+      if (pa && pa.hk && s.settings.autoSpeak !== false && ctx.speak) ctx.speak(pa.hk);
     }).catch(function (err) {
       chat.busy = false;
       chat.notice = errText(err);
@@ -591,6 +594,8 @@
       var pr = parseReply(content);
       chat.practice = { hk: pr.hk, jy: pr.jy, zh: pr.zh, cmp: null, judge: "" };
       paint();
+      /* 跟讀示範自動讀一次，唔使人手按 */
+      if (pr.hk && S().settings.autoSpeak !== false && ctx.speak) ctx.speak(pr.hk);
     }).catch(function (err) {
       chat.busy = false;
       chat.notice = errText(err);
