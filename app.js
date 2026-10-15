@@ -5,6 +5,49 @@
 (function () {
   "use strict";
 
+  /* ---- 開機自診斷：唔好再交白卷 ---- */
+  function bootFail(msg) {
+    try {
+      var v = document.getElementById("view") || document.body;
+      v.innerHTML = '<div class="card"><h3>呢一頁載入唔齊，所以空白</h3>' +
+        '<p class="sub">' + String(msg || "") + "</p>" +
+        '<p class="sub">多數係手機用咗舊緩存，或者上傳中途斷咗。做法：① 喺手機清一次呢個網站嘅資料／開無痕視窗再入；' +
+        "② 仍然唔得，就重新上傳 data.js、app.js、game.js、gameui.js、index.html、style.css 六個檔，再強制刷新。</p></div>";
+    } catch (e) {}
+  }
+  window.onerror = function (m, src, ln) {
+    bootFail("JavaScript 出錯：" + m + (src ? "（" + String(src).split("/").pop() + " 第 " + ln + " 行）" : ""));
+    return false;
+  };
+  /* 某個模組炸咗都唔好交白卷：上面出警告，下面照樣出自由練習頁，起碼用得返 */
+  function bizFallback(v, msg) {
+    try {
+      v.innerHTML = '<div class="card"><p class="sub"><b>呢一頁出咗事</b>：' + String(msg) +
+        "。你仍然可以用下面嘅自由練習；想修好，清一次網站資料或者重新上傳六個檔再刷新。</p></div>" + freeHTML();
+    } catch (e2) { bootFail(msg); }
+  }
+  /* 逐個檔案點名：lexicon.js / speak.js / ai.js 都係掛喺 CANTO_DATA 之下，
+     aiui.js 才出 CANTO_AI，所以唔可以只靠 window.CANTO_XXX 命名習慣 */
+  var NEED = [
+    ["data.js", function () { return window.CANTO_DATA && window.CANTO_DATA.toneQuiz; }],
+    ["lexicon.js", function () { return window.CANTO_DATA && window.CANTO_DATA.lexicon; }],
+    ["speak.js", function () { return window.CANTO_DATA && window.CANTO_DATA.speak; }],
+    ["sound.js", function () { return window.CANTO_SFX; }],
+    ["game.js", function () { return window.CANTO_GAME; }],
+    ["gameui.js", function () { return window.CANTO_GAMEUI; }],
+    ["ai.js", function () { return window.CANTO_DATA && window.CANTO_DATA.ai; }],
+    ["aiui.js", function () { return window.CANTO_AI; }]
+  ];
+  var MISSING = [], mi;
+  for (mi = 0; mi < NEED.length; mi++) {
+    try { if (!NEED[mi][1]()) MISSING.push(NEED[mi][0]); }
+    catch (e) { MISSING.push(NEED[mi][0]); }
+  }
+  if (MISSING.length) {
+    bootFail("呢幾個檔案冇載入成功：" + MISSING.join("、") + "。");
+    return;
+  }
+
   var D = window.CANTO_DATA;
   var KEY = "cantodrill.v1";
 
@@ -317,11 +360,13 @@
     var v = view();
     if (route === "home") {
       v.innerHTML = '<div id="gameroot"></div>';
-      if (GC) GC.mount($("gameroot"), GCTX); else v.innerHTML = freeHTML();
+      if (GC) { try { GC.mount($("gameroot"), GCTX); } catch (e) { bizFallback(v, "關卡地圖出錯：" + ((e && e.message) || e)); } }
+      else v.innerHTML = freeHTML();
     }
     else if (route === "album") {
       v.innerHTML = '<div id="gameroot"></div>';
-      if (GC) GC.album($("gameroot"), GCTX); else v.innerHTML = freeHTML();
+      if (GC) { try { GC.album($("gameroot"), GCTX); } catch (e) { bizFallback(v, "詞卡冊出錯：" + ((e && e.message) || e)); } }
+      else v.innerHTML = freeHTML();
     }
     else if (route === "free") v.innerHTML = freeHTML();
     else if (route === "lesson") v.innerHTML = lessonHTML();
@@ -1247,11 +1292,15 @@
   }
 
   /* ---------------- 启动 ---------------- */
-  initRef();
-  go("home");
-  if (window.CANTO_AI) window.CANTO_AI.maybeAskPlacement(AICTX);
-  loadVoices();
-  if ("speechSynthesis" in window) window.speechSynthesis.onvoiceschanged = loadVoices;
-  setTimeout(loadVoices, 500);
-  setTimeout(loadVoices, 1500);
+  try {
+    initRef();
+    go("home");
+    if (window.CANTO_AI) window.CANTO_AI.maybeAskPlacement(AICTX);
+    loadVoices();
+    if ("speechSynthesis" in window) window.speechSynthesis.onvoiceschanged = loadVoices;
+    setTimeout(loadVoices, 500);
+    setTimeout(loadVoices, 1500);
+  } catch (e) {
+    bootFail("啟動出錯：" + ((e && e.message) || e));
+  }
 })();
